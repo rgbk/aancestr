@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aancestr — Stage</title>
+<style>
+/* =========================================================
+   FONTS
+   Adam Legacy:    axis slnt  (-400 to 400)
+   Deutsch VAR:    axis wght  (100–900)  +  wdth (100–250)
+   ========================================================= */
+@font-face {
+  font-family: "Adam Legacy";
+  src: url("fonts/AdamLegacyVF.ttf") format("truetype-variations"),
+       url("fonts/AdamLegacyVF.ttf") format("truetype");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Deutsch VAR";
+  src: url("fonts/DeutschVARVF.ttf") format("truetype-variations"),
+       url("fonts/DeutschVARVF.ttf") format("truetype");
+  font-weight: 100 900;
+  font-stretch: 100% 250%;
+  font-display: swap;
+}
+
+/* =========================================================
+   DESIGN TOKENS — these are the CSS vars the CP writes to.
+   Every visual choice flows through here.
+   ========================================================= */
+:root {
+  --page-bg: #0E0B0A;
+  --text-color: #F2EDE7;
+  --font-family: "Adam Legacy", system-ui, sans-serif;
+  --font-size: 7vw;
+  --font-size-mobile: 11vw;
+  --letter-spacing: -0.02em;
+  --line-height: 1.1;
+  --text-align: center;
+  --font-variation: "slnt" 0;
+  --section-padding-y: 10vh;
+  --section-padding-x: 6vw;
+}
+
+/* =========================================================
+   RESET / BASE
+   ========================================================= */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--page-bg);
+  color: var(--text-color);
+  font-family: var(--font-family);
+  font-feature-settings: "kern" 1, "liga" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+/* =========================================================
+   VIDEO MASK ARCHITECTURE
+   Layer 1 (z=1): fixed full-viewport video
+   Layer 2 (z=2): the .cover element holding all content,
+                  with background matching --page-bg.
+                  When mask mode is on, mix-blend-mode reveals
+                  the video through the text shape.
+   ========================================================= */
+.bg-video {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  z-index: 1;
+  pointer-events: none;
+  display: none;
+}
+body.has-video .bg-video { display: block; }
+
+.cover {
+  position: relative;
+  z-index: 2;
+  background: var(--page-bg);
+  min-height: 100vh;
+}
+
+/* mix-blend-mode is applied only when mask is on */
+body[data-mask="darken"] .cover { mix-blend-mode: darken; }
+body[data-mask="lighten"] .cover { mix-blend-mode: lighten; }
+body[data-mask="off"] .cover { mix-blend-mode: normal; }
+
+/* When mask is active, text colour needs to be the right "punching" colour.
+   For darken: text must be lighter than bg (typically white on dark).
+   For lighten: text must be darker than bg (typically black on light).
+   The CP handles this automatically, but defaults are sane. */
+
+/* =========================================================
+   STATEMENT BLOCK
+   Each block is a full-viewport section.
+   ========================================================= */
+.statement {
+  min-height: 100vh;
+  padding: var(--section-padding-y) var(--section-padding-x);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: background-color 0.25s ease;
+  cursor: pointer;
+}
+
+.statement:hover .block-id-label {
+  opacity: 1;
+}
+
+.statement.selected {
+  outline: 1px dashed rgba(127, 127, 127, 0.6);
+  outline-offset: -8px;
+}
+
+.statement-text {
+  font-size: var(--font-size);
+  letter-spacing: var(--letter-spacing);
+  line-height: var(--line-height);
+  text-align: var(--text-align);
+  font-variation-settings: var(--font-variation);
+  color: var(--text-color);
+  max-width: 90vw;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  hyphens: none;
+}
+
+.block-id-label {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-color);
+  opacity: 0;
+  transition: opacity 0.2s;
+  font-variation-settings: normal;
+  font-weight: 500;
+  mix-blend-mode: difference;
+  pointer-events: none;
+}
+
+@media (max-width: 720px) {
+  :root {
+    --font-size: var(--font-size-mobile);
+    --section-padding-x: 8vw;
+  }
+  .block-id-label { top: 16px; left: 16px; font-size: 9px; }
+}
+
+/* =========================================================
+   CONTROL PANEL (CP)
+   Right-side drawer. Toggled by `x` key.
+   ========================================================= */
+.cp {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 360px;
+  background: rgba(14, 11, 10, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: #F2EDE7;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+  font-size: 12px;
+  z-index: 100;
+  overflow-y: auto;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0.36, 1);
+  border-left: 1px solid rgba(242, 237, 231, 0.08);
+  -webkit-font-smoothing: antialiased;
+}
+
+.cp.open { transform: translateX(0); }
+
+.cp-header {
+  padding: 20px 22px 14px;
+  border-bottom: 1px solid rgba(242, 237, 231, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cp-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.cp-close {
+  background: none;
+  border: none;
+  color: rgba(242, 237, 231, 0.5);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+}
+.cp-close:hover { color: rgba(242, 237, 231, 0.9); }
+
+.cp-section {
+  padding: 16px 22px;
+  border-bottom: 1px solid rgba(242, 237, 231, 0.06);
+}
+
+.cp-section-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-weight: 600;
+  opacity: 0.55;
+  margin-bottom: 12px;
+}
+
+.cp-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 9px;
+}
+
+.cp-row label {
+  flex: 0 0 90px;
+  color: rgba(242, 237, 231, 0.75);
+  font-size: 11px;
+}
+
+.cp-row .ctrl {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cp-row input[type="range"] {
+  flex: 1;
+  height: 4px;
+  background: rgba(242, 237, 231, 0.15);
+  border-radius: 2px;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  outline: none;
+}
+.cp-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  background: #F2EDE7;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.cp-row input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px;
+  background: #F2EDE7;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 0;
+}
+
+.cp-row input[type="color"] {
+  width: 36px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid rgba(242, 237, 231, 0.2);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.cp-row input[type="text"],
+.cp-row input[type="number"] {
+  background: rgba(242, 237, 231, 0.08);
+  border: 1px solid rgba(242, 237, 231, 0.12);
+  color: #F2EDE7;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font: inherit;
+  font-size: 11px;
+  width: 80px;
+  outline: none;
+  font-variant-numeric: tabular-nums;
+}
+.cp-row input[type="text"]:focus,
+.cp-row input[type="number"]:focus {
+  border-color: rgba(242, 237, 231, 0.3);
+}
+
+.cp-row select {
+  background: rgba(242, 237, 231, 0.08);
+  border: 1px solid rgba(242, 237, 231, 0.12);
+  color: #F2EDE7;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font: inherit;
+  font-size: 11px;
+  outline: none;
+  cursor: pointer;
+  flex: 1;
+}
+
+.cp-row .value {
+  flex: 0 0 48px;
+  text-align: right;
+  color: rgba(242, 237, 231, 0.5);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cp-btn {
+  background: #F2EDE7;
+  color: #1A1614;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 5px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  letter-spacing: 0.02em;
+}
+.cp-btn:hover { opacity: 0.85; }
+.cp-btn.ghost {
+  background: transparent;
+  color: rgba(242, 237, 231, 0.85);
+  border: 1px solid rgba(242, 237, 231, 0.18);
+  font-weight: 500;
+}
+.cp-btn.ghost:hover { border-color: rgba(242, 237, 231, 0.4); }
+.cp-btn.danger {
+  background: transparent;
+  color: rgba(255, 100, 100, 0.85);
+  border: 1px solid rgba(255, 100, 100, 0.25);
+  font-weight: 500;
+}
+.cp-btn.danger:hover { border-color: rgba(255, 100, 100, 0.5); }
+
+.cp-row .align-group {
+  display: flex;
+  background: rgba(242, 237, 231, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(242, 237, 231, 0.12);
+}
+.cp-row .align-group button {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: rgba(242, 237, 231, 0.55);
+  padding: 5px 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
+.cp-row .align-group button.active {
+  background: rgba(242, 237, 231, 0.15);
+  color: #F2EDE7;
+}
+
+.cp-empty {
+  font-size: 11px;
+  color: rgba(242, 237, 231, 0.4);
+  font-style: italic;
+  padding: 6px 0;
+}
+
+.cp-section.versions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cp-section.versions select {
+  width: 100%;
+}
+
+.cp-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+.cp-actions .cp-btn { flex: 1; padding: 7px 8px; }
+
+/* =========================================================
+   STATUS STRIP + HINT
+   ========================================================= */
+.status-strip {
+  position: fixed;
+  bottom: 18px;
+  left: 18px;
+  background: rgba(14, 11, 10, 0.7);
+  color: rgba(242, 237, 231, 0.55);
+  font-family: -apple-system, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 7px 11px;
+  border-radius: 4px;
+  z-index: 50;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.status-strip .dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(242, 237, 231, 0.3);
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.status-strip.live .dot { background: #6FB36F; box-shadow: 0 0 8px rgba(111, 179, 111, 0.6); }
+.status-strip.static .dot { background: #B07E2F; }
+
+.hint {
+  position: fixed;
+  bottom: 18px;
+  right: 18px;
+  color: rgba(242, 237, 231, 0.4);
+  font-family: -apple-system, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  z-index: 50;
+  pointer-events: none;
+  font-weight: 500;
+}
+.hint kbd {
+  background: rgba(242, 237, 231, 0.1);
+  border: 1px solid rgba(242, 237, 231, 0.18);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 10px;
+}
+
+/* TOAST */
+.toast {
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: #F2EDE7;
+  color: #1A1614;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-family: -apple-system, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  z-index: 200;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.toast.visible {
+  opacity: 0.97;
+  transform: translateX(-50%) translateY(0);
+}
+
+input[type="file"] { display: none; }
+</style>
+</head>
+<body>
+
+<video class="bg-video" id="bgVideo" autoplay loop muted playsinline></video>
+
+<main class="cover" id="stage"></main>
+
+<aside class="cp" id="cp">
+  <div class="cp-header">
+    <div class="cp-title">Control Panel</div>
+    <button class="cp-close" id="cpClose" title="Close (X)">×</button>
+  </div>
+
+  <div class="cp-section">
+    <div class="cp-section-title">Page</div>
+    <div class="cp-row">
+      <label>Background</label>
+      <div class="ctrl">
+        <input type="color" id="pageBg" value="#0E0B0A">
+        <input type="text" id="pageBgHex" value="#0E0B0A">
+      </div>
+    </div>
+    <div class="cp-row">
+      <label>Text colour</label>
+      <div class="ctrl">
+        <input type="color" id="textColor" value="#F2EDE7">
+        <input type="text" id="textColorHex" value="#F2EDE7">
+      </div>
+    </div>
+  </div>
+
+  <div class="cp-section">
+    <div class="cp-section-title">Typography</div>
+    <div class="cp-row">
+      <label>Font</label>
+      <div class="ctrl">
+        <select id="fontFamily">
+          <option value='"Adam Legacy", system-ui, sans-serif'>Adam Legacy</option>
+          <option value='"Deutsch VAR", system-ui, sans-serif'>Deutsch VAR</option>
+          <option value='-apple-system, BlinkMacSystemFont, system-ui, sans-serif'>System</option>
+          <option value='"Times New Roman", Times, serif'>Times</option>
+          <option value='Georgia, serif'>Georgia</option>
+        </select>
+      </div>
+    </div>
+    <div class="cp-row" id="slntRow" style="display:none;">
+      <label>Slant</label>
+      <div class="ctrl">
+        <input type="range" id="slnt" min="-400" max="400" step="10" value="0">
+        <span class="value" id="slntValue">0</span>
+      </div>
+    </div>
+    <div class="cp-row" id="wghtRow" style="display:none;">
+      <label>Weight</label>
+      <div class="ctrl">
+        <input type="range" id="wght" min="100" max="900" step="10" value="100">
+        <span class="value" id="wghtValue">100</span>
+      </div>
+    </div>
+    <div class="cp-row" id="wdthRow" style="display:none;">
+      <label>Width</label>
+      <div class="ctrl">
+        <input type="range" id="wdth" min="100" max="250" step="5" value="100">
+        <span class="value" id="wdthValue">100</span>
+      </div>
+    </div>
+    <div class="cp-row">
+      <label>Size</label>
+      <div class="ctrl">
+        <input type="range" id="fontSize" min="2" max="20" step="0.2" value="7">
+        <span class="value" id="fontSizeValue">7vw</span>
+      </div>
+    </div>
+    <div class="cp-row">
+      <label>Tracking</label>
+      <div class="ctrl">
+        <input type="range" id="letterSpacing" min="-0.1" max="0.2" step="0.005" value="-0.02">
+        <span class="value" id="letterSpacingValue">-0.02</span>
+      </div>
+    </div>
+    <div class="cp-row">
+      <label>Leading</label>
+      <div class="ctrl">
+        <input type="range" id="lineHeight" min="0.8" max="2" step="0.05" value="1.1">
+        <span class="value" id="lineHeightValue">1.1</span>
+      </div>
+    </div>
+    <div class="cp-row">
+      <label>Align</label>
+      <div class="ctrl">
+        <div class="align-group" id="alignGroup">
+          <button data-align="left">Left</button>
+          <button data-align="center" class="active">Center</button>
+          <button data-align="right">Right</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cp-section">
+    <div class="cp-section-title">Video Mask</div>
+    <div class="cp-row">
+      <label>Video</label>
+      <div class="ctrl">
+        <button class="cp-btn ghost" id="videoUpload">Upload…</button>
+        <button class="cp-btn ghost" id="videoClear">Clear</button>
+      </div>
+    </div>
+    <div class="cp-row">
+      <label>Mask</label>
+      <div class="ctrl">
+        <select id="maskMode">
+          <option value="off">Off</option>
+          <option value="darken">Darken (dark bg)</option>
+          <option value="lighten">Lighten (light bg)</option>
+        </select>
+      </div>
+    </div>
+    <input type="file" id="videoFile" accept="video/*">
+  </div>
+
+  <div class="cp-section" id="perStatementSection">
+    <div class="cp-section-title">Selected Statement</div>
+    <div id="perStatementContent" class="cp-empty">Click a statement to select it.</div>
+  </div>
+
+  <div class="cp-section versions">
+    <div class="cp-section-title">Versions</div>
+    <div class="cp-row">
+      <label>Load</label>
+      <div class="ctrl">
+        <select id="versionSelect"><option value="">(none yet)</option></select>
+      </div>
+    </div>
+    <div class="cp-row">
+      <label>Name</label>
+      <div class="ctrl">
+        <input type="text" id="versionName" placeholder="e.g. centered serif">
+      </div>
+    </div>
+    <div class="cp-actions">
+      <button class="cp-btn" id="versionSave">Save</button>
+      <button class="cp-btn ghost" id="versionDelete">Delete</button>
+      <button class="cp-btn ghost" id="versionExport">Export</button>
+    </div>
+  </div>
+
+  <div class="cp-section">
+    <div class="cp-section-title">Reset</div>
+    <div class="cp-actions">
+      <button class="cp-btn ghost" id="resetAll">Restore defaults</button>
+    </div>
+  </div>
+</aside>
+
+<div class="status-strip" id="statusStrip"><span class="dot"></span><span id="statusText">loading…</span></div>
+<div class="hint">press <kbd>X</kbd> for controls</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// =========================================================
+// CONTENT SYNC
+// Try to read v0.3 review state from localStorage. If present
+// and same origin (Live Server), use it. Otherwise fall back
+// to bundled v0.3 content.
+// =========================================================
+const REVIEW_KEY = "aancestr-transcript-v03-review";
+const VERSIONS_KEY = "aancestr-stage-versions";
+const STATE_KEY = "aancestr-stage-state";
+
+const FALLBACK_BLOCKS = [
+  { id: "01", section: "I. Before", text: "What we offer is not new." },
+  { id: "02", section: "I. Before", text: "It was old before we were here.\nIt survived because people kept doing it." },
+  { id: "03", section: "I. Before", text: "We did not invent it.\nWe carry it." },
+  { id: "04", section: "II. Slow", text: "Some things have to be repeated, for a long time, before they can be felt." },
+  { id: "05", section: "II. Slow", text: "This is one of them." },
+  { id: "06", section: "III. The Body", text: "The body keeps a longer record than you do." },
+  { id: "07", section: "III. The Body", text: "Health — the kind that stays —\nis not built in a season." },
+  { id: "08", section: "III. The Body", text: "It is built in moments of care.\nIn small, repeated things.\nIn what you return to." },
+  { id: "09", section: "IV. The Practice", text: "A small thing, taken with intention.\nSame hand. Same minute of the day." },
+  { id: "10", section: "IV. The Practice", text: "A pause.\nA breath.\nA small ceremony, before the day asks things of you." },
+  { id: "11", section: "IV. The Practice", text: "And then you carry on." },
+  { id: "12", section: "V. Family", text: "In a kitchen.\nA child, watching." },
+  { id: "13", section: "V. Family", text: "How one practices\nbecomes how the next one will." },
+  { id: "14", section: "VI. Time", text: "Three thousand years old.\nThinking about the next thirty." },
+  { id: "15", section: "VI. Time", text: "Made to be here when your children are old." },
+  { id: "16", section: "VII. What We Will Not Say", text: "We will not tell you it will change you in a week.\n\nWe will not put a number on what it does.\n\nWe will not show you a face you should want to look like." },
+  { id: "17", section: "VII. What We Will Not Say", text: "If those things are what brought you here,\nwe are not the ones." },
+  { id: "18", section: "VIII. Who Finds This", text: "If you are looking for something to live with\nfor the next thirty years —\n\nyou may have just found it." },
+  { id: "19", section: "IX. Aancestr", text: "Aancestr." },
+  { id: "20", section: "IX. Aancestr", text: "Philosophy. Ritual. Ceremony." },
+  { id: "21", section: "IX. Aancestr", text: "A small practice.\nFor a long life." },
+  { id: "22", section: "X. Stay", text: "The first batch is small.\nThe first circle is small.\n\nLeave your name. We will write when it is time." }
+];
+
+function loadBlocks() {
+  try {
+    const raw = localStorage.getItem(REVIEW_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.blocks && parsed.blocks.length > 0) {
+        return { source: "live", blocks: parsed.blocks.map(b => ({
+          id: b.id,
+          section: b.section,
+          text: b.edited !== null && b.edited !== undefined ? b.edited : b.text,
+          status: b.status || "pending"
+        })) };
+      }
+    }
+  } catch (e) {}
+  return { source: "static", blocks: FALLBACK_BLOCKS };
+}
+
+// =========================================================
+// STATE — design state (lives in --css vars + JS object).
+// Versions are snapshots of this state.
+// =========================================================
+const DEFAULT_STATE = {
+  pageBg: "#0E0B0A",
+  textColor: "#F2EDE7",
+  fontFamily: '"Adam Legacy", system-ui, sans-serif',
+  fontSize: 7,
+  letterSpacing: -0.02,
+  lineHeight: 1.1,
+  textAlign: "center",
+  slnt: 0,
+  wght: 400,
+  wdth: 100,
+  maskMode: "off",
+  perBlockBg: {}    // { "01": "#FF0000", ... }
+};
+
+let state = loadState();
+let videoBlobUrl = null;
+let selectedBlockId = null;
+let { source: contentSource, blocks } = loadBlocks();
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STATE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return { ...DEFAULT_STATE, ...parsed, perBlockBg: parsed.perBlockBg || {} };
+    }
+  } catch (e) {}
+  return { ...DEFAULT_STATE, perBlockBg: {} };
+}
+
+function saveState() {
+  try { localStorage.setItem(STATE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+// =========================================================
+// APPLY STATE TO DOM
+// =========================================================
+function applyState() {
+  const root = document.documentElement;
+  root.style.setProperty("--page-bg", state.pageBg);
+  root.style.setProperty("--text-color", state.textColor);
+  root.style.setProperty("--font-family", state.fontFamily);
+  root.style.setProperty("--font-size", state.fontSize + "vw");
+  root.style.setProperty("--letter-spacing", state.letterSpacing + "em");
+  root.style.setProperty("--line-height", state.lineHeight);
+  root.style.setProperty("--text-align", state.textAlign);
+
+  // Pick variation settings based on the chosen font
+  let variation = "normal";
+  if (state.fontFamily.includes("Adam Legacy")) {
+    variation = `"slnt" ${state.slnt}`;
+  } else if (state.fontFamily.includes("Deutsch VAR")) {
+    variation = `"wght" ${state.wght}, "wdth" ${state.wdth}`;
+  }
+  root.style.setProperty("--font-variation", variation);
+
+  document.body.dataset.mask = state.maskMode;
+
+  // Per-block backgrounds (clear inline, then re-apply)
+  document.querySelectorAll(".statement").forEach(el => {
+    const id = el.dataset.id;
+    if (state.perBlockBg[id]) {
+      el.style.backgroundColor = state.perBlockBg[id];
+    } else {
+      el.style.backgroundColor = "";
+    }
+  });
+
+  saveState();
+}
+
+// =========================================================
+// RENDER
+// =========================================================
+function renderStage() {
+  const stage = document.getElementById("stage");
+  stage.innerHTML = "";
+  blocks.forEach(b => {
+    const section = document.createElement("section");
+    section.className = "statement";
+    section.dataset.id = b.id;
+    section.dataset.section = b.section;
+
+    const label = document.createElement("div");
+    label.className = "block-id-label";
+    label.textContent = `${b.id} · ${b.section}`;
+    section.appendChild(label);
+
+    const text = document.createElement("div");
+    text.className = "statement-text";
+    text.textContent = b.text;
+    section.appendChild(text);
+
+    section.addEventListener("click", (e) => {
+      // Don't select if clicking inside CP
+      if (e.target.closest(".cp")) return;
+      selectBlock(b.id);
+    });
+
+    stage.appendChild(section);
+  });
+}
+
+function selectBlock(id) {
+  if (selectedBlockId === id) {
+    // Toggle off
+    selectedBlockId = null;
+  } else {
+    selectedBlockId = id;
+  }
+  document.querySelectorAll(".statement").forEach(el => {
+    el.classList.toggle("selected", el.dataset.id === selectedBlockId);
+  });
+  renderPerStatementSection();
+}
+
+function renderPerStatementSection() {
+  const container = document.getElementById("perStatementContent");
+  if (!selectedBlockId) {
+    container.innerHTML = '<div class="cp-empty">Click a statement to select it.</div>';
+    return;
+  }
+  const block = blocks.find(b => b.id === selectedBlockId);
+  if (!block) return;
+  const currentBg = state.perBlockBg[selectedBlockId] || state.pageBg;
+  container.innerHTML = `
+    <div style="font-size:11px; color:rgba(242,237,231,0.7); margin-bottom:10px; line-height:1.5;">
+      <strong style="color:#F2EDE7;">Block ${block.id}</strong> · ${block.section}<br>
+      <span style="opacity:0.6;">${block.text.split("\\n")[0].slice(0, 60)}${block.text.length > 60 ? "…" : ""}</span>
+    </div>
+    <div class="cp-row">
+      <label>Background</label>
+      <div class="ctrl">
+        <input type="color" id="blockBgColor" value="${currentBg}">
+        <input type="text" id="blockBgHex" value="${currentBg}">
+      </div>
+    </div>
+    <div class="cp-actions">
+      <button class="cp-btn ghost" id="blockBgReset">Reset to page bg</button>
+    </div>
+  `;
+  document.getElementById("blockBgColor").addEventListener("input", e => {
+    const val = e.target.value;
+    document.getElementById("blockBgHex").value = val;
+    state.perBlockBg[selectedBlockId] = val;
+    applyState();
+  });
+  document.getElementById("blockBgHex").addEventListener("input", e => {
+    const val = e.target.value;
+    if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+      document.getElementById("blockBgColor").value = val;
+      state.perBlockBg[selectedBlockId] = val;
+      applyState();
+    }
+  });
+  document.getElementById("blockBgReset").addEventListener("click", () => {
+    delete state.perBlockBg[selectedBlockId];
+    applyState();
+    renderPerStatementSection();
+  });
+}
+
+// =========================================================
+// CP BINDINGS
+// =========================================================
+function bindCP() {
+  const $ = id => document.getElementById(id);
+
+  // Page bg
+  $("pageBg").addEventListener("input", e => {
+    state.pageBg = e.target.value;
+    $("pageBgHex").value = e.target.value;
+    applyState();
+  });
+  $("pageBgHex").addEventListener("input", e => {
+    if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+      state.pageBg = e.target.value;
+      $("pageBg").value = e.target.value;
+      applyState();
+    }
+  });
+
+  // Text color
+  $("textColor").addEventListener("input", e => {
+    state.textColor = e.target.value;
+    $("textColorHex").value = e.target.value;
+    applyState();
+  });
+  $("textColorHex").addEventListener("input", e => {
+    if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+      state.textColor = e.target.value;
+      $("textColor").value = e.target.value;
+      applyState();
+    }
+  });
+
+  // Font family
+  $("fontFamily").addEventListener("change", e => {
+    state.fontFamily = e.target.value;
+    updateAxisVisibility();
+    applyState();
+  });
+
+  // Variable axes
+  $("slnt").addEventListener("input", e => {
+    state.slnt = parseFloat(e.target.value);
+    $("slntValue").textContent = state.slnt;
+    applyState();
+  });
+  $("wght").addEventListener("input", e => {
+    state.wght = parseFloat(e.target.value);
+    $("wghtValue").textContent = state.wght;
+    applyState();
+  });
+  $("wdth").addEventListener("input", e => {
+    state.wdth = parseFloat(e.target.value);
+    $("wdthValue").textContent = state.wdth;
+    applyState();
+  });
+
+  // Size / tracking / leading
+  $("fontSize").addEventListener("input", e => {
+    state.fontSize = parseFloat(e.target.value);
+    $("fontSizeValue").textContent = state.fontSize.toFixed(1) + "vw";
+    applyState();
+  });
+  $("letterSpacing").addEventListener("input", e => {
+    state.letterSpacing = parseFloat(e.target.value);
+    $("letterSpacingValue").textContent = state.letterSpacing.toFixed(3);
+    applyState();
+  });
+  $("lineHeight").addEventListener("input", e => {
+    state.lineHeight = parseFloat(e.target.value);
+    $("lineHeightValue").textContent = state.lineHeight.toFixed(2);
+    applyState();
+  });
+
+  // Align
+  document.querySelectorAll("#alignGroup button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#alignGroup button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      state.textAlign = btn.dataset.align;
+      applyState();
+    });
+  });
+
+  // Video
+  $("videoUpload").addEventListener("click", () => $("videoFile").click());
+  $("videoFile").addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (videoBlobUrl) URL.revokeObjectURL(videoBlobUrl);
+    videoBlobUrl = URL.createObjectURL(file);
+    const vid = $("bgVideo");
+    vid.src = videoBlobUrl;
+    vid.load();
+    vid.play().catch(() => {});
+    document.body.classList.add("has-video");
+    if (state.maskMode === "off") {
+      // Auto-suggest darken if dark bg, lighten if light
+      const luminance = hexLuminance(state.pageBg);
+      state.maskMode = luminance < 0.5 ? "darken" : "lighten";
+      $("maskMode").value = state.maskMode;
+    }
+    applyState();
+    toast("Video loaded · mask " + state.maskMode);
+  });
+  $("videoClear").addEventListener("click", () => {
+    if (videoBlobUrl) URL.revokeObjectURL(videoBlobUrl);
+    videoBlobUrl = null;
+    $("bgVideo").src = "";
+    document.body.classList.remove("has-video");
+    state.maskMode = "off";
+    $("maskMode").value = "off";
+    applyState();
+    toast("Video cleared");
+  });
+  $("maskMode").addEventListener("change", e => {
+    state.maskMode = e.target.value;
+    applyState();
+  });
+
+  // Versions
+  $("versionSave").addEventListener("click", saveVersion);
+  $("versionDelete").addEventListener("click", deleteVersion);
+  $("versionExport").addEventListener("click", exportVersions);
+  $("versionSelect").addEventListener("change", e => loadVersion(e.target.value));
+
+  // Reset
+  $("resetAll").addEventListener("click", () => {
+    if (!confirm("Reset all design choices to defaults? Saved versions are kept.")) return;
+    state = { ...DEFAULT_STATE, perBlockBg: {} };
+    syncCPToState();
+    applyState();
+    toast("Reset to defaults");
+  });
+
+  // CP close button
+  $("cpClose").addEventListener("click", () => toggleCP(false));
+}
+
+function hexLuminance(hex) {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function updateAxisVisibility() {
+  const slntRow = document.getElementById("slntRow");
+  const wghtRow = document.getElementById("wghtRow");
+  const wdthRow = document.getElementById("wdthRow");
+  if (state.fontFamily.includes("Adam Legacy")) {
+    slntRow.style.display = "flex"; wghtRow.style.display = "none"; wdthRow.style.display = "none";
+  } else if (state.fontFamily.includes("Deutsch VAR")) {
+    slntRow.style.display = "none"; wghtRow.style.display = "flex"; wdthRow.style.display = "flex";
+  } else {
+    slntRow.style.display = "none"; wghtRow.style.display = "none"; wdthRow.style.display = "none";
+  }
+}
+
+function syncCPToState() {
+  const $ = id => document.getElementById(id);
+  $("pageBg").value = state.pageBg;
+  $("pageBgHex").value = state.pageBg;
+  $("textColor").value = state.textColor;
+  $("textColorHex").value = state.textColor;
+  $("fontFamily").value = state.fontFamily;
+  $("slnt").value = state.slnt; $("slntValue").textContent = state.slnt;
+  $("wght").value = state.wght; $("wghtValue").textContent = state.wght;
+  $("wdth").value = state.wdth; $("wdthValue").textContent = state.wdth;
+  $("fontSize").value = state.fontSize; $("fontSizeValue").textContent = state.fontSize.toFixed(1) + "vw";
+  $("letterSpacing").value = state.letterSpacing; $("letterSpacingValue").textContent = state.letterSpacing.toFixed(3);
+  $("lineHeight").value = state.lineHeight; $("lineHeightValue").textContent = state.lineHeight.toFixed(2);
+  document.querySelectorAll("#alignGroup button").forEach(b => {
+    b.classList.toggle("active", b.dataset.align === state.textAlign);
+  });
+  $("maskMode").value = state.maskMode;
+  updateAxisVisibility();
+}
+
+// =========================================================
+// VERSIONS
+// =========================================================
+function loadVersionsList() {
+  try {
+    const raw = localStorage.getItem(VERSIONS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) { return []; }
+}
+
+function saveVersionsList(list) {
+  try { localStorage.setItem(VERSIONS_KEY, JSON.stringify(list)); } catch (e) {}
+}
+
+function refreshVersionSelect() {
+  const select = document.getElementById("versionSelect");
+  const list = loadVersionsList();
+  if (list.length === 0) {
+    select.innerHTML = '<option value="">(none yet)</option>';
+  } else {
+    select.innerHTML = '<option value="">— select —</option>' + list.map(v =>
+      `<option value="${v.id}">${escapeAttr(v.name)} · ${new Date(v.savedAt).toLocaleString()}</option>`
+    ).join("");
+  }
+}
+
+function escapeAttr(s) { return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]); }
+
+function saveVersion() {
+  const nameInput = document.getElementById("versionName");
+  const name = nameInput.value.trim() || `Version ${loadVersionsList().length + 1}`;
+  const id = "v_" + Date.now();
+  const version = { id, name, savedAt: new Date().toISOString(), state: JSON.parse(JSON.stringify(state)) };
+  const list = loadVersionsList();
+  list.push(version);
+  saveVersionsList(list);
+  nameInput.value = "";
+  refreshVersionSelect();
+  document.getElementById("versionSelect").value = id;
+  toast(`Saved "${name}"`);
+}
+
+function loadVersion(id) {
+  if (!id) return;
+  const list = loadVersionsList();
+  const v = list.find(x => x.id === id);
+  if (!v) return;
+  state = { ...DEFAULT_STATE, ...v.state, perBlockBg: v.state.perBlockBg || {} };
+  syncCPToState();
+  applyState();
+  toast(`Loaded "${v.name}"`);
+}
+
+function deleteVersion() {
+  const select = document.getElementById("versionSelect");
+  const id = select.value;
+  if (!id) { toast("Select a version first"); return; }
+  const list = loadVersionsList();
+  const v = list.find(x => x.id === id);
+  if (!v) return;
+  if (!confirm(`Delete version "${v.name}"?`)) return;
+  saveVersionsList(list.filter(x => x.id !== id));
+  refreshVersionSelect();
+  toast(`Deleted "${v.name}"`);
+}
+
+function exportVersions() {
+  const list = loadVersionsList();
+  if (list.length === 0) { toast("No versions to export"); return; }
+  const blob = new Blob([JSON.stringify(list, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "aancestr-stage-versions.json";
+  a.click();
+  URL.revokeObjectURL(url);
+  toast("Exported versions JSON");
+}
+
+// =========================================================
+// CP TOGGLE
+// =========================================================
+function toggleCP(forceState) {
+  const cp = document.getElementById("cp");
+  const shouldOpen = forceState !== undefined ? forceState : !cp.classList.contains("open");
+  cp.classList.toggle("open", shouldOpen);
+}
+
+// =========================================================
+// KEYBOARD
+// =========================================================
+document.addEventListener("keydown", e => {
+  const t = e.target;
+  if (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT") return;
+  if (e.key === "x" || e.key === "X") { e.preventDefault(); toggleCP(); }
+  else if (e.key === "Escape") { toggleCP(false); }
+});
+
+// =========================================================
+// LIVE SYNC — re-read review tool localStorage periodically
+// to pick up changes when both pages are open on same origin.
+// =========================================================
+let lastBlocksJson = JSON.stringify(blocks);
+setInterval(() => {
+  try {
+    const raw = localStorage.getItem(REVIEW_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!parsed.blocks) return;
+    const fresh = parsed.blocks.map(b => ({
+      id: b.id,
+      section: b.section,
+      text: b.edited !== null && b.edited !== undefined ? b.edited : b.text,
+      status: b.status || "pending"
+    }));
+    const freshJson = JSON.stringify(fresh);
+    if (freshJson !== lastBlocksJson) {
+      blocks = fresh;
+      lastBlocksJson = freshJson;
+      contentSource = "live";
+      updateStatusStrip();
+      renderStage();
+      applyState();
+      toast("Content refreshed from review tool");
+    }
+  } catch (e) {}
+}, 2000);
+
+function updateStatusStrip() {
+  const strip = document.getElementById("statusStrip");
+  const text = document.getElementById("statusText");
+  strip.className = "status-strip " + contentSource;
+  if (contentSource === "live") text.textContent = `Live · v0.3 · ${blocks.length} blocks`;
+  else text.textContent = `Static · v0.3 fallback · ${blocks.length} blocks`;
+}
+
+// =========================================================
+// TOAST
+// =========================================================
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("visible");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("visible"), 1600);
+}
+
+// =========================================================
+// INIT
+// =========================================================
+renderStage();
+bindCP();
+syncCPToState();
+applyState();
+refreshVersionSelect();
+updateStatusStrip();
+
+</script>
+</body>
+</html>

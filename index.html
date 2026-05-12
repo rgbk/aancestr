@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aancestr — Transcript Review</title>
+<style>
+:root {
+  --bg: #F2EDE7;
+  --surface: #FAF6F1;
+  --surface-2: #ECE5DC;
+  --text: #1A1614;
+  --muted: #6B6157;
+  --border: #E5DDD3;
+  --green: #4A6B3E;
+  --amber: #B07E2F;
+  --red: #8B3A2F;
+  --blue: #4A5C6B;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Inter, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* HEADER */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(242, 237, 231, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 13px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.header .meta {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+
+.header .spacer { flex: 1; }
+
+.header button, .header select {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.header button:hover, .header select:hover {
+  background: var(--surface);
+  border-color: var(--muted);
+}
+
+.header button.primary {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+.header button.primary:hover {
+  background: #2A2420;
+  border-color: #2A2420;
+}
+
+/* PROGRESS */
+.progress {
+  display: flex;
+  gap: 0;
+  height: 4px;
+  width: 180px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress span { display: block; height: 100%; }
+.progress .approved { background: var(--green); }
+.progress .edited { background: var(--blue); }
+.progress .rewrite { background: var(--amber); }
+.progress .cut { background: var(--red); }
+
+/* PAGE */
+.intro {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 80px 32px 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.intro h2 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--muted);
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.intro p {
+  margin: 0 auto 8px;
+  max-width: 480px;
+}
+
+.intro kbd {
+  font: inherit;
+  font-size: 11px;
+  background: white;
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: ui-monospace, Menlo, monospace;
+  color: var(--text);
+}
+
+.intro .quiet {
+  opacity: 0.65;
+  font-size: 12px;
+  margin-top: 14px;
+  font-style: italic;
+}
+
+/* COMPASS — through-lines from Marc's prioritized post-its */
+.compass {
+  max-width: 720px;
+  margin: 36px auto 0;
+  padding: 18px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.compass-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--muted);
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.compass-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.compass-tags span {
+  font-size: 11px;
+  padding: 5px 11px;
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 99px;
+  letter-spacing: 0.01em;
+  font-weight: 500;
+}
+
+.compass-hint {
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+  margin-top: 6px;
+}
+
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px 32px 240px;
+}
+
+.section-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--muted);
+  margin: 96px 0 24px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.section-label:first-child { margin-top: 40px; }
+
+.block {
+  position: relative;
+  margin: 56px 0;
+  padding: 24px 16px;
+  border-radius: 10px;
+  transition: background 0.18s;
+}
+
+.block:hover { background: var(--surface); }
+
+.block.focused {
+  background: var(--surface);
+  outline: 1px solid var(--muted);
+  outline-offset: -1px;
+}
+
+.block-text {
+  font-size: 30px;
+  line-height: 1.35;
+  font-weight: 300;
+  letter-spacing: -0.015em;
+  white-space: pre-wrap;
+  outline: none;
+  text-align: center;
+  color: var(--text);
+}
+
+.block-text[contenteditable="true"] {
+  background: white;
+  padding: 16px;
+  border-radius: 6px;
+  box-shadow: 0 0 0 2px var(--blue);
+  text-align: center;
+}
+
+/* STATUS-DEPENDENT STYLES */
+.block[data-status="cut"] .block-text {
+  text-decoration: line-through;
+  text-decoration-color: var(--red);
+  text-decoration-thickness: 1px;
+  opacity: 0.35;
+}
+
+.block[data-status="rewrite"] .block-text {
+  opacity: 0.65;
+}
+
+.block[data-status="edited"] .block-text {
+  font-style: italic;
+  font-style: normal;
+}
+
+/* ID + STATUS DOT */
+.block-id {
+  position: absolute;
+  top: 32px;
+  left: -8px;
+  transform: translateX(-100%);
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.block-id .id-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.2s;
+}
+.block[data-status="approved"] .status-dot { background: var(--green); }
+.block[data-status="edited"] .status-dot { background: var(--blue); }
+.block[data-status="rewrite"] .status-dot { background: var(--amber); }
+.block[data-status="cut"] .status-dot { background: var(--red); }
+
+/* LEFT-EDGE STRIP — high-visibility cue that a decision has been made on this block */
+.block[data-status="approved"] { box-shadow: inset 3px 0 0 var(--green); }
+.block[data-status="edited"] { box-shadow: inset 3px 0 0 var(--blue); }
+.block[data-status="rewrite"] { box-shadow: inset 3px 0 0 var(--amber); }
+.block[data-status="cut"] { box-shadow: inset 3px 0 0 var(--red); }
+
+/* STATUS BADGE — small chip near the block id */
+.status-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 99px;
+  background: transparent;
+  color: var(--muted);
+  display: none;
+  margin-top: 4px;
+  white-space: nowrap;
+}
+.block[data-status="approved"] .status-label { display: inline-block; background: var(--green); color: white; }
+.block[data-status="edited"] .status-label { display: inline-block; background: var(--blue); color: white; }
+.block[data-status="rewrite"] .status-label { display: inline-block; background: var(--amber); color: white; }
+.block[data-status="cut"] .status-label { display: inline-block; background: var(--red); color: white; }
+
+/* ACTIONS */
+.actions {
+  position: absolute;
+  top: 24px;
+  right: -8px;
+  transform: translateX(100%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+
+.block:hover .actions,
+.block.focused .actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.actions button {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s;
+  padding: 0;
+  font-family: inherit;
+  color: var(--text);
+}
+
+.actions button:hover {
+  background: white;
+  border-color: var(--muted);
+  transform: translateX(-2px);
+}
+
+.actions button.active[data-action="approved"] { background: var(--green); color: white; border-color: var(--green); }
+.actions button.active[data-action="cut"] { background: var(--red); color: white; border-color: var(--red); }
+.actions button.active[data-action="rewrite"] { background: var(--amber); color: white; border-color: var(--amber); }
+.actions button.active[data-action="edit"] { background: var(--blue); color: white; border-color: var(--blue); }
+
+/* NOTE DISPLAY (collapsed) */
+.note-display {
+  margin: 14px auto 0;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border-left: 2px solid var(--muted);
+  border-radius: 0 4px 4px 0;
+  font-size: 13px;
+  color: var(--muted);
+  font-style: italic;
+  max-width: 540px;
+  line-height: 1.5;
+}
+
+.note-display .tags {
+  font-style: normal;
+  font-size: 11px;
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
+  margin-right: 8px;
+  color: var(--text);
+  opacity: 0.6;
+}
+
+/* NOTE PANEL (open) */
+.note-panel {
+  margin-top: 18px;
+  padding: 16px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  text-align: left;
+}
+
+.note-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.note-tag {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: white;
+  cursor: pointer;
+  transition: all 0.12s;
+  user-select: none;
+  color: var(--text);
+}
+
+.note-tag:hover { border-color: var(--muted); }
+
+.note-tag.active {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+.note-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: white;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  resize: vertical;
+  min-height: 64px;
+  outline: none;
+  color: var(--text);
+  font-family: inherit;
+}
+
+.note-input:focus { border-color: var(--muted); box-shadow: 0 0 0 1px var(--muted); }
+
+/* MODAL */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 22, 20, 0.4);
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+.modal-backdrop.open { display: flex; }
+
+.modal {
+  background: var(--bg);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 820px;
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+}
+
+.modal-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+}
+
+.modal-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.modal-tabs {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.modal-tab {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--muted);
+  user-select: none;
+}
+
+.modal-tab.active {
+  background: white;
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.modal-body {
+  flex: 1;
+  overflow: auto;
+  padding: 24px;
+}
+
+.modal-pane { display: none; }
+.modal-pane.active { display: block; }
+
+.modal pre, .modal textarea {
+  width: 100%;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  resize: none;
+  outline: none;
+  white-space: pre-wrap;
+  color: var(--text);
+  min-height: 400px;
+  box-sizing: border-box;
+}
+
+.modal-actions {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  background: var(--surface);
+}
+
+.modal-actions button {
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 7px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+}
+.modal-actions button.primary {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+.modal-actions button:hover { border-color: var(--muted); }
+.modal-actions button.primary:hover { background: #2A2420; }
+
+.preview-content {
+  max-width: 600px;
+  margin: 0 auto;
+}
+.preview-section {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--muted);
+  margin: 48px 0 16px;
+  text-align: center;
+}
+.preview-section:first-child { margin-top: 8px; }
+.preview-block {
+  font-size: 22px;
+  line-height: 1.4;
+  font-weight: 300;
+  text-align: center;
+  margin: 32px 0;
+  white-space: pre-wrap;
+  letter-spacing: -0.01em;
+}
+
+.empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 80px 20px;
+  font-size: 14px;
+}
+
+/* TOAST */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: var(--text);
+  color: var(--bg);
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+  z-index: 300;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.toast.visible {
+  opacity: 0.95;
+  transform: translateX(-50%) translateY(0);
+}
+
+input[type="file"] { display: none; }
+
+</style>
+</head>
+<body>
+
+<header class="header">
+  <h1>Aancestr — Transcript Review</h1>
+  <span class="meta" id="version">v0.3</span>
+  <div class="progress" id="progress" title="Review progress"></div>
+  <span class="meta" id="counter">0 of 23</span>
+  <div class="spacer"></div>
+  <select id="filter" title="Filter blocks">
+    <option value="all">All blocks</option>
+    <option value="pending">Pending</option>
+    <option value="approved">Approved</option>
+    <option value="edited">Edited</option>
+    <option value="rewrite">Needs rewrite</option>
+    <option value="cut">Cut</option>
+  </select>
+  <button id="import-btn" title="Import a previous review JSON">Import</button>
+  <button id="reset-btn" title="Wipe all decisions">Reset</button>
+  <button id="export-btn" class="primary">Export</button>
+  <input type="file" id="import-input" accept=".json">
+</header>
+
+<div class="intro">
+  <h2>How this works</h2>
+  <p>Click any block to focus it. Use the buttons on the right — or keys <kbd>A</kbd> approve · <kbd>E</kbd> edit · <kbd>W</kbd> flag for rewrite · <kbd>X</kbd> cut · <kbd>N</kbd> note.</p>
+  <p><kbd>J</kbd>/<kbd>K</kbd> to move between blocks. <kbd>Esc</kbd> to unfocus.</p>
+  <p>Notes are gold — when something doesn't land, say why. When you hit Export, I'll see every note, tag, and flag.</p>
+  <p class="quiet">This tool flags decisions; it does not generate text. The flagged lines get redone when you send me the export.</p>
+</div>
+
+<div class="compass">
+  <div class="compass-title">Through-lines · from your post-it priorities</div>
+  <div class="compass-tags">
+    <span>Ritual vs Intervention</span>
+    <span>Health is built over time</span>
+    <span>Philosophy · Ritual · Ceremony</span>
+    <span>FAMILY</span>
+    <span>Ancient vs Modern</span>
+    <span>Daily Practice</span>
+    <span>3,000 / 30</span>
+    <span>Moments vs Lifetimes</span>
+  </div>
+  <div class="compass-hint">Ask each block: does it earn one of these?</div>
+</div>
+
+<main class="page" id="page"></main>
+
+<div class="modal-backdrop" id="export-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Export</div>
+      <div class="modal-tabs">
+        <div class="modal-tab active" data-tab="preview">Preview</div>
+        <div class="modal-tab" data-tab="markdown">Markdown</div>
+        <div class="modal-tab" data-tab="review">Review report</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-pane active" data-pane="preview">
+        <div class="preview-content" id="preview-pane"></div>
+      </div>
+      <div class="modal-pane" data-pane="markdown">
+        <textarea id="markdown-pane" readonly></textarea>
+      </div>
+      <div class="modal-pane" data-pane="review">
+        <textarea id="review-pane" readonly></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button id="close-modal">Close</button>
+      <button id="copy-btn">Copy</button>
+      <button id="download-btn" class="primary">Download</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// INITIAL CONTENT — v0.2
+// ============================================================
+const INITIAL_BLOCKS = [
+  { id: "01", section: "I. Before", text: "What we offer is not new." },
+  { id: "02", section: "I. Before", text: "It was old before we were here.\nIt survived because people kept doing it." },
+  { id: "03", section: "I. Before", text: "We did not invent it.\nWe carry it." },
+  { id: "04", section: "II. Slow", text: "Some things have to be repeated, for a long time, before they can be felt." },
+  { id: "05", section: "II. Slow", text: "This is one of them." },
+  { id: "06", section: "III. The Body", text: "The body keeps a longer record than you do." },
+  { id: "07", section: "III. The Body", text: "Health — the kind that stays —\nis not built in a season." },
+  { id: "08", section: "III. The Body", text: "It is built in moments of care.\nIn small, repeated things.\nIn what you return to." },
+  { id: "09", section: "IV. The Practice", text: "A small thing, taken with intention.\nSame hand. Same minute of the day." },
+  { id: "10", section: "IV. The Practice", text: "A pause.\nA breath.\nA small ceremony, before the day asks things of you." },
+  { id: "11", section: "IV. The Practice", text: "And then you carry on." },
+  { id: "12", section: "V. Family", text: "In a kitchen.\nA child, watching." },
+  { id: "13", section: "V. Family", text: "How one practices\nbecomes how the next one will." },
+  { id: "14", section: "VI. Time", text: "Three thousand years old.\nThinking about the next thirty." },
+  { id: "15", section: "VI. Time", text: "Made to be here when your children are old." },
+  { id: "16", section: "VII. What We Will Not Say", text: "We will not tell you it will change you in a week.\n\nWe will not put a number on what it does.\n\nWe will not show you a face you should want to look like." },
+  { id: "17", section: "VII. What We Will Not Say", text: "If those things are what brought you here,\nwe are not the ones." },
+  { id: "18", section: "VIII. Who Finds This", text: "If you are looking for something to live with\nfor the next thirty years —\n\nyou may have just found it." },
+  { id: "19", section: "IX. Aancestr", text: "Aancestr." },
+  { id: "20", section: "IX. Aancestr", text: "Philosophy. Ritual. Ceremony." },
+  { id: "21", section: "IX. Aancestr", text: "A small practice.\nFor a long life." },
+  { id: "22", section: "X. Stay", text: "The first batch is small.\nThe first circle is small.\n\nLeave your name. We will write when it is time." }
+];
+
+const PRESET_TAGS = ["weird", "too brand-y", "too poetic", "wrong tone", "love this", "trim", "expand", "wrong fact", "good idea / wrong words", "show me alternatives"];
+
+const STORAGE_KEY = "aancestr-transcript-v03-review";
+
+// ============================================================
+// STATE
+// ============================================================
+let state = loadState();
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.blocks && parsed.blocks.length === INITIAL_BLOCKS.length) {
+        return parsed;
+      }
+    }
+  } catch (e) {}
+  return freshState();
+}
+
+function freshState() {
+  return {
+    blocks: INITIAL_BLOCKS.map(b => ({
+      ...b,
+      status: "pending",
+      edited: null,
+      note: "",
+      tags: []
+    })),
+    filter: "all",
+    focusedId: null
+  };
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function render() {
+  renderPage();
+  renderHeader();
+  saveState();
+}
+
+function renderHeader() {
+  const counts = { approved: 0, edited: 0, rewrite: 0, cut: 0, pending: 0 };
+  state.blocks.forEach(b => counts[b.status]++);
+  const reviewed = state.blocks.length - counts.pending;
+  document.getElementById("counter").textContent = `${reviewed} of ${state.blocks.length}`;
+  const total = state.blocks.length;
+  const progress = document.getElementById("progress");
+  progress.innerHTML = "";
+  ["approved", "edited", "rewrite", "cut"].forEach(s => {
+    if (counts[s] > 0) {
+      const span = document.createElement("span");
+      span.className = s;
+      span.style.width = `${(counts[s] / total) * 100}%`;
+      progress.appendChild(span);
+    }
+  });
+  document.getElementById("filter").value = state.filter;
+}
+
+function renderPage() {
+  const page = document.getElementById("page");
+  page.innerHTML = "";
+  let currentSection = null;
+  const filtered = state.blocks.filter(b => {
+    if (state.filter === "all") return true;
+    return b.status === state.filter;
+  });
+
+  if (filtered.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = `No blocks in this filter yet.`;
+    page.appendChild(empty);
+    return;
+  }
+
+  filtered.forEach(b => {
+    if (b.section !== currentSection) {
+      const label = document.createElement("div");
+      label.className = "section-label";
+      label.textContent = b.section;
+      page.appendChild(label);
+      currentSection = b.section;
+    }
+
+    const block = document.createElement("div");
+    block.className = "block";
+    block.dataset.id = b.id;
+    block.dataset.status = b.status;
+    if (state.focusedId === b.id) block.classList.add("focused");
+
+    const idLabel = document.createElement("div");
+    idLabel.className = "block-id";
+    const statusText = {
+      "approved": "kept",
+      "edited": "edited",
+      "rewrite": "redo",
+      "cut": "cut",
+      "pending": ""
+    }[b.status] || "";
+    idLabel.innerHTML = `<div class="id-row"><span class="status-dot"></span>${b.id}</div>` +
+      (statusText ? `<span class="status-label">${statusText}</span>` : '');
+    block.appendChild(idLabel);
+
+    const text = document.createElement("div");
+    text.className = "block-text";
+    text.textContent = b.edited !== null ? b.edited : b.text;
+    text.addEventListener("dblclick", (e) => { e.stopPropagation(); startEdit(b.id); });
+    block.appendChild(text);
+
+    const actions = document.createElement("div");
+    actions.className = "actions";
+    [
+      ["approved", "✓", "Approve (A)"],
+      ["edit", "✎", "Edit inline (E)"],
+      ["rewrite", "⚑", "Flag for rewrite — I'll redo this line on the next round (W)"],
+      ["cut", "✕", "Cut (X)"],
+      ["note", "✎̇", "Open note (N)"]
+    ].forEach(([action, icon, title]) => {
+      const btn = document.createElement("button");
+      if (action === "note") {
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
+      } else {
+        btn.textContent = icon;
+      }
+      btn.title = title;
+      btn.dataset.action = action;
+      if (b.status === action) btn.classList.add("active");
+      if (action === "edit" && b.status === "edited") btn.classList.add("active");
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        handleAction(b.id, action);
+      });
+      actions.appendChild(btn);
+    });
+    block.appendChild(actions);
+
+    // Note display when not focused
+    if ((b.note || b.tags.length) && state.focusedId !== b.id) {
+      const noteDisplay = document.createElement("div");
+      noteDisplay.className = "note-display";
+      const tagsHtml = b.tags.length ? `<span class="tags">[${b.tags.join(" · ")}]</span>` : "";
+      noteDisplay.innerHTML = `${tagsHtml}${escapeHtml(b.note)}`;
+      block.appendChild(noteDisplay);
+    }
+
+    // Note panel when focused
+    if (state.focusedId === b.id) {
+      const panel = document.createElement("div");
+      panel.className = "note-panel";
+
+      const tagsRow = document.createElement("div");
+      tagsRow.className = "note-tags";
+      PRESET_TAGS.forEach(tag => {
+        const chip = document.createElement("div");
+        chip.className = "note-tag";
+        chip.textContent = tag;
+        if (b.tags.includes(tag)) chip.classList.add("active");
+        chip.addEventListener("click", (e) => { e.stopPropagation(); toggleTag(b.id, tag); });
+        tagsRow.appendChild(chip);
+      });
+      panel.appendChild(tagsRow);
+
+      const input = document.createElement("textarea");
+      input.className = "note-input";
+      input.placeholder = "What's off about this line? Or what's good about it? Free text — this is what I'll read on the next pass.";
+      input.value = b.note;
+      input.addEventListener("input", (e) => {
+        const blk = state.blocks.find(x => x.id === b.id);
+        if (blk) {
+          blk.note = e.target.value;
+          saveState();
+          renderHeader();
+        }
+      });
+      input.addEventListener("click", (e) => e.stopPropagation());
+      panel.appendChild(input);
+
+      block.appendChild(panel);
+    }
+
+    block.addEventListener("click", (e) => {
+      if (e.target.closest(".actions, .note-panel")) return;
+      setFocus(b.id);
+    });
+
+    page.appendChild(block);
+  });
+}
+
+function escapeHtml(str) {
+  return str.replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[c]);
+}
+
+// ============================================================
+// ACTIONS
+// ============================================================
+function setFocus(id) {
+  state.focusedId = state.focusedId === id ? null : id;
+  render();
+}
+
+function handleAction(id, action) {
+  const block = state.blocks.find(b => b.id === id);
+  if (!block) return;
+
+  if (action === "note") { setFocus(id); return; }
+  if (action === "edit") { startEdit(id); return; }
+
+  // Toggle status: clicking the same active action clears it back to pending
+  if (block.status === action) {
+    block.status = "pending";
+  } else {
+    block.status = action;
+    // For cut and rewrite, auto-open the note panel so Marc can explain
+    if (action === "rewrite" || action === "cut") {
+      state.focusedId = id;
+    }
+  }
+  render();
+}
+
+function startEdit(id) {
+  const block = state.blocks.find(b => b.id === id);
+  if (!block) return;
+  if (state.focusedId !== id) {
+    state.focusedId = id;
+    render();
+  }
+  setTimeout(() => {
+    const blockEl = document.querySelector(`.block[data-id="${id}"] .block-text`);
+    if (!blockEl) return;
+    blockEl.contentEditable = "true";
+    blockEl.focus();
+    const range = document.createRange();
+    range.selectNodeContents(blockEl);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+    function finish(save) {
+      blockEl.contentEditable = "false";
+      blockEl.removeEventListener("blur", onBlur);
+      blockEl.removeEventListener("keydown", onKey);
+      if (save) {
+        const newText = blockEl.innerText.replace(/ /g, " ").trim();
+        if (newText !== block.text) {
+          block.edited = newText;
+          block.status = "edited";
+        } else {
+          block.edited = null;
+          if (block.status === "edited") block.status = "pending";
+        }
+        toast("Edit saved");
+      }
+      render();
+    }
+
+    function onBlur() { finish(true); }
+    function onKey(e) {
+      if (e.key === "Escape") { e.preventDefault(); finish(false); }
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); blockEl.blur(); }
+    }
+
+    blockEl.addEventListener("blur", onBlur);
+    blockEl.addEventListener("keydown", onKey);
+  }, 20);
+}
+
+function toggleTag(id, tag) {
+  const block = state.blocks.find(b => b.id === id);
+  if (!block) return;
+  const i = block.tags.indexOf(tag);
+  if (i >= 0) block.tags.splice(i, 1);
+  else block.tags.push(tag);
+  render();
+}
+
+// ============================================================
+// HEADER CONTROLS
+// ============================================================
+document.getElementById("filter").addEventListener("change", (e) => {
+  state.filter = e.target.value;
+  render();
+});
+
+document.getElementById("reset-btn").addEventListener("click", () => {
+  if (confirm("Wipe all approvals, edits, notes, and tags?\nThis cannot be undone.")) {
+    state = freshState();
+    saveState();
+    render();
+    toast("Reset to v0.2");
+  }
+});
+
+document.getElementById("import-btn").addEventListener("click", () => {
+  document.getElementById("import-input").click();
+});
+
+document.getElementById("import-input").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (data.blocks && Array.isArray(data.blocks)) {
+        state.blocks = INITIAL_BLOCKS.map((init, i) => {
+          const imported = data.blocks.find(b => b.id === init.id) || data.blocks[i] || {};
+          return {
+            id: init.id,
+            section: init.section,
+            text: init.text,
+            edited: imported.edited || null,
+            status: imported.status || "pending",
+            tags: imported.tags || [],
+            note: imported.note || ""
+          };
+        });
+        state.focusedId = null;
+        render();
+        toast("Review imported");
+      } else {
+        toast("Invalid file format");
+      }
+    } catch (err) {
+      toast("Could not parse file");
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = "";
+});
+
+// ============================================================
+// EXPORT MODAL
+// ============================================================
+const modal = document.getElementById("export-modal");
+
+document.getElementById("export-btn").addEventListener("click", () => {
+  buildExports();
+  // Auto-select the most useful tab: if nothing was approved, jump to Review report
+  const keptCount = state.blocks.filter(b => b.status === "approved" || b.status === "edited").length;
+  const targetTab = keptCount === 0 ? "review" : "preview";
+  document.querySelectorAll(".modal-tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".modal-pane").forEach(p => p.classList.remove("active"));
+  document.querySelector(`.modal-tab[data-tab="${targetTab}"]`).classList.add("active");
+  document.querySelector(`.modal-pane[data-pane="${targetTab}"]`).classList.add("active");
+  modal.classList.add("open");
+});
+
+document.getElementById("close-modal").addEventListener("click", () => {
+  modal.classList.remove("open");
+});
+
+modal.addEventListener("click", (e) => {
+  if (e.target === modal) modal.classList.remove("open");
+});
+
+document.querySelectorAll(".modal-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".modal-tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".modal-pane").forEach(p => p.classList.remove("active"));
+    tab.classList.add("active");
+    document.querySelector(`.modal-pane[data-pane="${tab.dataset.tab}"]`).classList.add("active");
+  });
+});
+
+function getActiveTab() {
+  return document.querySelector(".modal-tab.active").dataset.tab;
+}
+
+function buildExports() {
+  // PREVIEW — only approved + edited blocks, as a rendered scroll
+  const previewPane = document.getElementById("preview-pane");
+  previewPane.innerHTML = "";
+  let currentSection = null;
+  const kept = state.blocks.filter(b => b.status === "approved" || b.status === "edited");
+  kept.forEach(b => {
+    if (b.section !== currentSection) {
+      const label = document.createElement("div");
+      label.className = "preview-section";
+      label.textContent = b.section;
+      previewPane.appendChild(label);
+      currentSection = b.section;
+    }
+    const block = document.createElement("div");
+    block.className = "preview-block";
+    block.textContent = b.edited !== null ? b.edited : b.text;
+    previewPane.appendChild(block);
+  });
+  if (kept.length === 0) {
+    const reviewed = state.blocks.filter(b => b.status !== "pending").length;
+    const flagged = state.blocks.filter(b => b.status === "rewrite").length;
+    const cutCount = state.blocks.filter(b => b.status === "cut").length;
+    if (reviewed === 0) {
+      previewPane.innerHTML = '<div class="empty">No blocks reviewed yet.<br><br>Approve (A) any lines you want to keep, and they\'ll show here as the surviving page.</div>';
+    } else {
+      previewPane.innerHTML = `<div class="empty"><strong>Your review is complete but nothing was marked to keep.</strong><br><br>You flagged ${flagged} for rewrite, cut ${cutCount}, with no approvals yet — which is fine if v0.2 needs a substantial redo.<br><br>Switch to the <strong>Review report</strong> tab to send me everything — status, notes, tags, flags. That's the file I need to write v0.3.</div>`;
+    }
+  }
+
+  // MARKDOWN — only the kept blocks
+  let md = `# Aancestr — Approved Scroll\n\n_Generated from transcript v0.2 review · ${new Date().toLocaleString()}_\n`;
+  let cs = null;
+  kept.forEach(b => {
+    if (b.section !== cs) { md += `\n## ${b.section}\n`; cs = b.section; }
+    md += `\n**${b.id}**\n${b.edited !== null ? b.edited : b.text}\n`;
+  });
+  if (kept.length === 0) md += `\n_No blocks approved yet._\n`;
+  document.getElementById("markdown-pane").value = md;
+
+  // REVIEW REPORT — full JSON of every decision
+  const report = {
+    document: "Aancestr — Transcript v0.2 review",
+    exportedAt: new Date().toISOString(),
+    summary: {
+      total: state.blocks.length,
+      approved: state.blocks.filter(b => b.status === "approved").length,
+      edited: state.blocks.filter(b => b.status === "edited").length,
+      rewrite: state.blocks.filter(b => b.status === "rewrite").length,
+      cut: state.blocks.filter(b => b.status === "cut").length,
+      pending: state.blocks.filter(b => b.status === "pending").length
+    },
+    blocks: state.blocks.map(b => ({
+      id: b.id,
+      section: b.section,
+      status: b.status,
+      original: b.text,
+      edited: b.edited,
+      tags: b.tags,
+      note: b.note
+    }))
+  };
+  document.getElementById("review-pane").value = JSON.stringify(report, null, 2);
+}
+
+document.getElementById("copy-btn").addEventListener("click", async () => {
+  const tab = getActiveTab();
+  let text = "";
+  if (tab === "markdown") text = document.getElementById("markdown-pane").value;
+  else if (tab === "review") text = document.getElementById("review-pane").value;
+  else text = document.getElementById("preview-pane").innerText;
+  try {
+    await navigator.clipboard.writeText(text);
+    toast("Copied to clipboard");
+  } catch {
+    toast("Copy failed — select and copy manually");
+  }
+});
+
+document.getElementById("download-btn").addEventListener("click", () => {
+  const tab = getActiveTab();
+  let text, name, type;
+  if (tab === "markdown") {
+    text = document.getElementById("markdown-pane").value;
+    name = "aancestr-approved-scroll.md";
+    type = "text/markdown";
+  } else if (tab === "review") {
+    text = document.getElementById("review-pane").value;
+    name = "aancestr-review-report.json";
+    type = "application/json";
+  } else {
+    text = document.getElementById("preview-pane").innerText;
+    name = "aancestr-preview.txt";
+    type = "text/plain";
+  }
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast(`Downloaded ${name}`);
+});
+
+// ============================================================
+// TOAST
+// ============================================================
+let toastT;
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("visible");
+  clearTimeout(toastT);
+  toastT = setTimeout(() => el.classList.remove("visible"), 1700);
+}
+
+// ============================================================
+// KEYBOARD
+// ============================================================
+document.addEventListener("keydown", (e) => {
+  const tag = e.target.tagName;
+  if (tag === "TEXTAREA" || tag === "SELECT" || tag === "INPUT" || e.target.isContentEditable) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+  if (modal.classList.contains("open")) {
+    if (e.key === "Escape") modal.classList.remove("open");
+    return;
+  }
+
+  const id = state.focusedId;
+
+  if (!id) {
+    if (e.key === "j" || e.key === "J" || e.key === "ArrowDown") {
+      e.preventDefault();
+      setFocus(state.blocks[0].id);
+      scrollToBlock(state.blocks[0].id);
+    }
+    return;
+  }
+
+  const idx = state.blocks.findIndex(b => b.id === id);
+
+  if (e.key === "j" || e.key === "J" || e.key === "ArrowDown") {
+    e.preventDefault();
+    const next = state.blocks[Math.min(state.blocks.length - 1, idx + 1)];
+    state.focusedId = next.id;
+    render();
+    scrollToBlock(next.id);
+  } else if (e.key === "k" || e.key === "K" || e.key === "ArrowUp") {
+    e.preventDefault();
+    const prev = state.blocks[Math.max(0, idx - 1)];
+    state.focusedId = prev.id;
+    render();
+    scrollToBlock(prev.id);
+  } else if (e.key === "a" || e.key === "A") {
+    e.preventDefault(); handleAction(id, "approved");
+    toast(state.blocks.find(b => b.id === id).status === "approved" ? "Approved" : "Approval cleared");
+  } else if (e.key === "x" || e.key === "X") {
+    e.preventDefault(); handleAction(id, "cut");
+    toast(state.blocks.find(b => b.id === id).status === "cut" ? "Cut" : "Cut cleared");
+  } else if (e.key === "w" || e.key === "W") {
+    e.preventDefault(); handleAction(id, "rewrite");
+    toast(state.blocks.find(b => b.id === id).status === "rewrite" ? "Marked for rewrite" : "Rewrite flag cleared");
+  } else if (e.key === "e" || e.key === "E") {
+    e.preventDefault(); startEdit(id);
+  } else if (e.key === "n" || e.key === "N") {
+    e.preventDefault();
+    // Focus is already set; scroll the note input into view and focus it
+    const input = document.querySelector(`.block[data-id="${id}"] .note-input`);
+    if (input) input.focus();
+  } else if (e.key === "Escape") {
+    e.preventDefault(); setFocus(null);
+  }
+});
+
+function scrollToBlock(id) {
+  setTimeout(() => {
+    const el = document.querySelector(`.block[data-id="${id}"]`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, 30);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+render();
+setTimeout(() => toast("Loaded · click any block to begin"), 400);
+
+</script>
+</body>
+</html>
