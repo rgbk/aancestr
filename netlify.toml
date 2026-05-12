@@ -1,0 +1,16 @@
+# Netlify build + functions config for Aancestr
+# Static site (no build step); functions live in netlify/functions
+# and use Netlify Blobs for shared state.
+
+[build]
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Long cache on static assets (videos, fonts) — they're content-hashed by Cloudinary
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

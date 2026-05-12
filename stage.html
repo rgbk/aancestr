@@ -636,6 +636,18 @@ input[type="file"] { display: none; }
 <div class="hint">press <kbd>X</kbd> for controls</div>
 <div class="toast" id="toast"></div>
 
+<!-- Cloudinary upload widget — used by CP for persistent video uploads -->
+<script src="https://upload-widget.cloudinary.com/global/all.js"></script>
+
+<script>
+// =========================================================
+// CLOUDINARY + NETLIFY FUNCTION CONFIG
+// =========================================================
+const CLOUDINARY_CLOUD = "dsgxmrcyq";
+const CLOUDINARY_PRESET = "Aancestr";
+const VIDEO_API = "/api/video";
+</script>
+
 <script>
 // =========================================================
 // CONTENT SYNC
@@ -942,39 +954,24 @@ function bindCP() {
     });
   });
 
-  // Video
-  $("videoUpload").addEventListener("click", () => $("videoFile").click());
-  $("videoFile").addEventListener("change", e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (videoBlobUrl) URL.revokeObjectURL(videoBlobUrl);
-    videoBlobUrl = URL.createObjectURL(file);
-    const vid = $("bgVideo");
-    vid.src = videoBlobUrl;
-    vid.load();
-    vid.play().catch(() => {});
-    document.body.classList.add("has-video");
-    if (state.maskMode === "off") {
-      // Auto-suggest darken if dark bg, lighten if light
-      const luminance = hexLuminance(state.pageBg);
-      state.maskMode = luminance < 0.5 ? "darken" : "lighten";
-      $("maskMode").value = state.maskMode;
-    }
-    applyState();
-    toast("Video loaded · mask " + state.maskMode);
-  });
-  $("videoClear").addEventListener("click", () => {
-    if (videoBlobUrl) URL.revokeObjectURL(videoBlobUrl);
-    videoBlobUrl = null;
-    $("bgVideo").src = "";
-    document.body.classList.remove("has-video");
-    state.maskMode = "off";
-    $("maskMode").value = "off";
-    applyState();
-    toast("Video cleared");
-  });
+  // Video — Cloudinary widget for persistent uploads
+  $("videoUpload").addEventListener("click", () => openCloudinaryUpload());
+  $("videoClear").addEventListener("click", () => clearVideo());
   $("maskMode").addEventListener("change", e => {
     state.maskMode = e.target.value;
+    // Auto-snap colours so the mask doesn't leak.
+    // darken requires bg darker than every video pixel — pure #000 guarantees it.
+    // lighten requires bg lighter than every video pixel — pure #FFF guarantees it.
+    if (state.maskMode === "darken") {
+      state.pageBg = "#000000";
+      state.textColor = "#FFFFFF";
+      toast("Snapped to pure black bg for clean mask");
+    } else if (state.maskMode === "lighten") {
+      state.pageBg = "#FFFFFF";
+      state.textColor = "#000000";
+      toast("Snapped to pure white bg for clean mask");
+    }
+    syncCPToState();
     applyState();
   });
 
@@ -1136,6 +1133,140 @@ document.addEventListener("keydown", e => {
 });
 
 // =========================================================
+// VIDEO: Cloudinary upload + Netlify Function-backed default
+// =========================================================
+let cloudinaryWidget = null;
+
+function buildCloudinaryWidget() {
+  if (typeof cloudinary === "undefined") return null;
+  return cloudinary.createUploadWidget(
+    {
+      cloudName: CLOUDINARY_CLOUD,
+      uploadPreset: CLOUDINARY_PRESET,
+      sources: ["local", "url", "camera", "dropbox", "google_drive"],
+      resourceType: "video",
+      multiple: false,
+      maxFileSize: 100 * 1024 * 1024, // 100 MB
+      showAdvancedOptions: false,
+      cropping: false,
+      folder: "aancestr-stage",
+      styles: {
+        palette: {
+          window: "#0E0B0A",
+          sourceBg: "#1A1614",
+          windowBorder: "#2A2421",
+          tabIcon: "#F2EDE7",
+          inactiveTabIcon: "#6B6157",
+          menuIcons: "#F2EDE7",
+          link: "#F2EDE7",
+          action: "#F2EDE7",
+          inProgress: "#F2EDE7",
+          complete: "#6FB36F",
+          error: "#8B3A2F",
+          textDark: "#1A1614",
+          textLight: "#F2EDE7",
+        },
+        frame: { background: "rgba(14, 11, 10, 0.85)" },
+      },
+    },
+    (error, result) => {
+      if (error) {
+        console.error("Cloudinary upload error:", error);
+        toast("Upload error: " + (error.statusText || error.message || "unknown"));
+        return;
+      }
+      if (!result) return;
+      if (result.event === "success") {
+        const url = result.info.secure_url;
+        setBackgroundVideo(url);
+        saveDefaultVideo(url);
+      }
+    }
+  );
+}
+
+function openCloudinaryUpload() {
+  if (typeof cloudinary === "undefined") {
+    toast("Cloudinary widget still loading — try again in a moment");
+    return;
+  }
+  if (!cloudinaryWidget) cloudinaryWidget = buildCloudinaryWidget();
+  if (cloudinaryWidget) cloudinaryWidget.open();
+}
+
+function setBackgroundVideo(url) {
+  const vid = document.getElementById("bgVideo");
+  vid.src = url;
+  vid.load();
+  vid.play().catch(() => {});
+  document.body.classList.add("has-video");
+
+  // Auto-snap to clean mask config if mask is currently off
+  if (state.maskMode === "off") {
+    const luminance = hexLuminance(state.pageBg);
+    state.maskMode = luminance < 0.5 ? "darken" : "lighten";
+    if (state.maskMode === "darken") {
+      state.pageBg = "#000000";
+      state.textColor = "#FFFFFF";
+    } else {
+      state.pageBg = "#FFFFFF";
+      state.textColor = "#000000";
+    }
+    syncCPToState();
+  }
+  applyState();
+}
+
+async function loadDefaultVideo() {
+  try {
+    const res = await fetch(VIDEO_API, { cache: "no-store" });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data && data.url) {
+      setBackgroundVideo(data.url);
+    }
+  } catch (e) {
+    // Function not available (e.g. running on plain `npx serve` locally) — fine.
+  }
+}
+
+async function saveDefaultVideo(url) {
+  try {
+    const res = await fetch(VIDEO_API, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    if (res.ok) {
+      toast("Saved · everyone visiting now sees this video");
+    } else {
+      toast("Uploaded — but couldn't save as default (function unavailable)");
+    }
+  } catch (e) {
+    toast("Uploaded locally — couldn't reach default-video function");
+  }
+}
+
+async function clearVideo() {
+  document.getElementById("bgVideo").src = "";
+  document.body.classList.remove("has-video");
+  state.maskMode = "off";
+  syncCPToState();
+  applyState();
+  try {
+    const res = await fetch(VIDEO_API, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url: null }),
+    });
+    if (res.ok) toast("Cleared default video for everyone");
+    else toast("Cleared locally");
+  } catch (e) {
+    toast("Cleared locally");
+  }
+}
+
+// =========================================================
 // LIVE SYNC — re-read review tool localStorage periodically
 // to pick up changes when both pages are open on same origin.
 // =========================================================
@@ -1194,6 +1325,7 @@ syncCPToState();
 applyState();
 refreshVersionSelect();
 updateStatusStrip();
+loadDefaultVideo();
 
 </script>
 </body>
