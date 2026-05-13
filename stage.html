@@ -1091,23 +1091,16 @@ async function publishDesignState(stateToPublish, label) {
   }
 }
 
-async function hydrateFromPublishedDesign() {
-  // Only pull the published design if the user has no local state yet
-  // (i.e., first visit on this browser / incognito / new device).
-  const hasLocal = localStorage.getItem(STATE_KEY) !== null;
-  if (hasLocal) return;
+async function fetchPublishedDesign() {
   try {
     const res = await fetch(DESIGN_API, { cache: "no-store" });
-    if (!res.ok) return;
+    if (!res.ok) return null;
     const data = await res.json();
-    if (data && data.state) {
-      state = { ...DEFAULT_STATE, ...data.state, perBlockBg: data.state.perBlockBg || {} };
-      syncCPToState();
-      applyState();
-    }
+    if (data && data.state) return data.state;
   } catch (e) {
     // function unavailable (localhost without netlify dev) — fine
   }
+  return null;
 }
 
 function loadVersion(id) {
@@ -1353,14 +1346,34 @@ function toast(msg) {
 // =========================================================
 // INIT
 // =========================================================
-renderStage();
-bindCP();
-syncCPToState();
-applyState();
-refreshVersionSelect();
-updateStatusStrip();
-loadDefaultVideo();
-hydrateFromPublishedDesign();
+(async function init() {
+  // Capture localStorage state BEFORE anything writes to it.
+  // applyState() calls saveState() which would defeat the check.
+  const hadLocalStateAtStart = localStorage.getItem(STATE_KEY) !== null;
+
+  renderStage();
+  bindCP();
+
+  // For first-time visitors (no local state — incognito, new device, cleared storage),
+  // pull the published design from the server BEFORE applying state.
+  // This way there's no flash of defaults snapping to the real design.
+  if (!hadLocalStateAtStart) {
+    const published = await fetchPublishedDesign();
+    if (published) {
+      state = {
+        ...DEFAULT_STATE,
+        ...published,
+        perBlockBg: published.perBlockBg || {},
+      };
+    }
+  }
+
+  syncCPToState();
+  applyState();
+  refreshVersionSelect();
+  updateStatusStrip();
+  loadDefaultVideo();
+})();
 
 </script>
 </body>
