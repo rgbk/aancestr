@@ -110,13 +110,15 @@ body { background: var(--page-bg); }
 .statement.has-mask-video .text-mask-video { display: block; }
 .statement.has-mask-video .statement-text { visibility: hidden; }
 
-/* Hidden SVG container for mask definitions (one mask per statement). */
+/* SVG container holding the per-statement text mask def.
+   Must span the section so percentages inside resolve to section pixels. */
 .mask-defs {
   position: absolute;
-  width: 0;
-  height: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* Mask text — inherits typography vars so the masked shape matches the
@@ -875,9 +877,12 @@ function renderStage() {
 
     const maskId = `tm-${b.id}`;
     const lines = b.text.split("\n");
+    // For multi-line text, shift the first line up so the block centres around y=50%
+    const lineHeightEm = 1.1;
+    const firstLineDy = -((lines.length - 1) / 2) * lineHeightEm;
     const tspans = lines
       .map((line, idx) => {
-        const dy = idx === 0 ? 0 : 1;
+        const dy = idx === 0 ? firstLineDy : lineHeightEm;
         return `<tspan x="50%" dy="${dy}em">${escapeXml(line)}</tspan>`;
       })
       .join("");
@@ -889,10 +894,10 @@ function renderStage() {
     // 4. Visible HTML statement-text (hidden by .has-mask-video class when mask video is set)
     // 5. Screen-reader-only text for accessibility
     section.innerHTML = `
-      <svg class="mask-defs" aria-hidden="true">
+      <svg class="mask-defs" aria-hidden="true" preserveAspectRatio="none">
         <defs>
-          <mask id="${maskId}">
-            <rect width="100%" height="100%" fill="black"/>
+          <mask id="${maskId}" maskUnits="userSpaceOnUse" x="0" y="0" width="100%" height="100%">
+            <rect x="0" y="0" width="100%" height="100%" fill="black"/>
             <text x="50%" y="50%" text-anchor="middle" dominant-baseline="central">
               ${tspans}
             </text>
