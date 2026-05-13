@@ -39,6 +39,7 @@
   --line-height: 1.1;
   --text-align: center;
   --text-transform: none;
+  --text-opacity: 1;
   --font-variation: "slnt" 0;
   --section-padding-y: 10vh;
   --section-padding-x: 6vw;
@@ -105,8 +106,9 @@ body[data-mask="off"] .cover { mix-blend-mode: normal; }
   min-height: 100vh;
   padding: var(--section-padding-y) var(--section-padding-x);
   display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: center;
+  align-items: stretch;
   position: relative;
   transition: background-color 0.25s ease;
   cursor: pointer;
@@ -129,7 +131,8 @@ body[data-mask="off"] .cover { mix-blend-mode: normal; }
   text-transform: var(--text-transform);
   font-variation-settings: var(--font-variation);
   color: var(--text-color);
-  max-width: 90vw;
+  opacity: var(--text-opacity);
+  width: 100%;
   white-space: pre-wrap;
   word-wrap: break-word;
   hyphens: none;
@@ -362,11 +365,15 @@ body[data-mask="off"] .cover { mix-blend-mode: normal; }
   background: transparent;
   border: none;
   color: rgba(242, 237, 231, 0.55);
-  padding: 5px 0;
+  padding: 6px 6px;
   cursor: pointer;
   font: inherit;
   font-size: 11px;
+  border-right: 1px solid rgba(242, 237, 231, 0.08);
+  transition: background 0.12s, color 0.12s;
 }
+.cp-row .align-group button:last-child { border-right: none; }
+.cp-row .align-group button:hover { color: rgba(242, 237, 231, 0.85); }
 .cp-row .align-group button.active {
   background: rgba(242, 237, 231, 0.15);
   color: #F2EDE7;
@@ -586,6 +593,13 @@ input[type="file"] { display: none; }
         </div>
       </div>
     </div>
+    <div class="cp-row">
+      <label>Opacity</label>
+      <div class="ctrl">
+        <input type="range" id="textOpacity" min="0" max="1" step="0.05" value="1">
+        <span class="value" id="textOpacityValue">1.00</span>
+      </div>
+    </div>
   </div>
 
   <div class="cp-section">
@@ -728,6 +742,7 @@ const DEFAULT_STATE = {
   lineHeight: 1.1,
   textAlign: "center",
   textTransform: "none",
+  textOpacity: 1,
   slnt: 0,
   wght: 400,
   wdth: 100,
@@ -757,6 +772,7 @@ function applyState() {
   root.style.setProperty("--line-height", state.lineHeight);
   root.style.setProperty("--text-align", state.textAlign);
   root.style.setProperty("--text-transform", state.textTransform || "none");
+  root.style.setProperty("--text-opacity", state.textOpacity != null ? state.textOpacity : 1);
 
   // Pick variation settings based on the chosen font
   let variation = "normal";
@@ -948,6 +964,13 @@ function bindCP() {
     applyState();
   });
 
+  // Text opacity
+  $("textOpacity").addEventListener("input", e => {
+    state.textOpacity = parseFloat(e.target.value);
+    $("textOpacityValue").textContent = state.textOpacity.toFixed(2);
+    applyState();
+  });
+
   // Align
   document.querySelectorAll("#alignGroup button").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -1041,6 +1064,8 @@ function syncCPToState() {
   $("fontSize").value = state.fontSize; $("fontSizeValue").textContent = state.fontSize.toFixed(1) + "vw";
   $("letterSpacing").value = state.letterSpacing; $("letterSpacingValue").textContent = state.letterSpacing.toFixed(3);
   $("lineHeight").value = state.lineHeight; $("lineHeightValue").textContent = state.lineHeight.toFixed(2);
+  $("textOpacity").value = state.textOpacity != null ? state.textOpacity : 1;
+  $("textOpacityValue").textContent = (state.textOpacity != null ? state.textOpacity : 1).toFixed(2);
   document.querySelectorAll("#alignGroup button").forEach(b => {
     b.classList.toggle("active", b.dataset.align === state.textAlign);
   });
