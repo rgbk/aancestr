@@ -38,6 +38,7 @@
   --letter-spacing: -0.02em;
   --line-height: 1.1;
   --text-align: center;
+  --text-transform: none;
   --font-variation: "slnt" 0;
   --section-padding-y: 10vh;
   --section-padding-x: 6vw;
@@ -125,6 +126,7 @@ body[data-mask="off"] .cover { mix-blend-mode: normal; }
   letter-spacing: var(--letter-spacing);
   line-height: var(--line-height);
   text-align: var(--text-align);
+  text-transform: var(--text-transform);
   font-variation-settings: var(--font-variation);
   color: var(--text-color);
   max-width: 90vw;
@@ -574,6 +576,16 @@ input[type="file"] { display: none; }
         </div>
       </div>
     </div>
+    <div class="cp-row">
+      <label>Case</label>
+      <div class="ctrl">
+        <div class="align-group" id="caseGroup">
+          <button data-case="none" class="active" title="Sentence case (as typed)">Aa</button>
+          <button data-case="uppercase" title="Uppercase">AA</button>
+          <button data-case="lowercase" title="Lowercase">aa</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="cp-section">
@@ -658,7 +670,7 @@ const DESIGN_API = "/api/design";
 // =========================================================
 const REVIEW_KEY = "aancestr-transcript-v03-review";
 const VERSIONS_KEY = "aancestr-stage-versions";
-const STATE_KEY = "aancestr-stage-state";
+// STATE_KEY removed — working-draft localStorage no longer used.
 
 const FALLBACK_BLOCKS = [
   { id: "01", section: "I. Before", text: "What we offer is not new." },
@@ -715,6 +727,7 @@ const DEFAULT_STATE = {
   letterSpacing: -0.02,
   lineHeight: 1.1,
   textAlign: "center",
+  textTransform: "none",
   slnt: 0,
   wght: 400,
   wdth: 100,
@@ -722,25 +735,14 @@ const DEFAULT_STATE = {
   perBlockBg: {}    // { "01": "#FF0000", ... }
 };
 
-let state = loadState();
+let state = { ...DEFAULT_STATE, perBlockBg: {} };
 let videoBlobUrl = null;
 let selectedBlockId = null;
 let { source: contentSource, blocks } = loadBlocks();
 
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STATE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return { ...DEFAULT_STATE, ...parsed, perBlockBg: parsed.perBlockBg || {} };
-    }
-  } catch (e) {}
-  return { ...DEFAULT_STATE, perBlockBg: {} };
-}
-
-function saveState() {
-  try { localStorage.setItem(STATE_KEY, JSON.stringify(state)); } catch (e) {}
-}
+// Working-draft localStorage was removed at Marc's request — tweaks are pure
+// in-memory until Save publishes them. Reload = fetch server (or defaults).
+function saveState() { /* no-op — keep stub so callers don't break */ }
 
 // =========================================================
 // APPLY STATE TO DOM
@@ -754,6 +756,7 @@ function applyState() {
   root.style.setProperty("--letter-spacing", state.letterSpacing + "em");
   root.style.setProperty("--line-height", state.lineHeight);
   root.style.setProperty("--text-align", state.textAlign);
+  root.style.setProperty("--text-transform", state.textTransform || "none");
 
   // Pick variation settings based on the chosen font
   let variation = "normal";
@@ -955,6 +958,16 @@ function bindCP() {
     });
   });
 
+  // Case
+  document.querySelectorAll("#caseGroup button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#caseGroup button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      state.textTransform = btn.dataset.case;
+      applyState();
+    });
+  });
+
   // Video — Cloudinary widget for persistent uploads
   $("videoUpload").addEventListener("click", () => openCloudinaryUpload());
   $("videoClear").addEventListener("click", () => clearVideo());
@@ -1030,6 +1043,9 @@ function syncCPToState() {
   $("lineHeight").value = state.lineHeight; $("lineHeightValue").textContent = state.lineHeight.toFixed(2);
   document.querySelectorAll("#alignGroup button").forEach(b => {
     b.classList.toggle("active", b.dataset.align === state.textAlign);
+  });
+  document.querySelectorAll("#caseGroup button").forEach(b => {
+    b.classList.toggle("active", b.dataset.case === state.textTransform);
   });
   $("maskMode").value = state.maskMode;
   updateAxisVisibility();
@@ -1347,25 +1363,18 @@ function toast(msg) {
 // INIT
 // =========================================================
 (async function init() {
-  // Capture localStorage state BEFORE anything writes to it.
-  // applyState() calls saveState() which would defeat the check.
-  const hadLocalStateAtStart = localStorage.getItem(STATE_KEY) !== null;
-
   renderStage();
   bindCP();
 
-  // For first-time visitors (no local state — incognito, new device, cleared storage),
-  // pull the published design from the server BEFORE applying state.
-  // This way there's no flash of defaults snapping to the real design.
-  if (!hadLocalStateAtStart) {
-    const published = await fetchPublishedDesign();
-    if (published) {
-      state = {
-        ...DEFAULT_STATE,
-        ...published,
-        perBlockBg: published.perBlockBg || {},
-      };
-    }
+  // Always pull the published design from the server before applying state.
+  // No localStorage working-draft anymore — server is the source of truth.
+  const published = await fetchPublishedDesign();
+  if (published) {
+    state = {
+      ...DEFAULT_STATE,
+      ...published,
+      perBlockBg: published.perBlockBg || {},
+    };
   }
 
   syncCPToState();
