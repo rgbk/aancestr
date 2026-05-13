@@ -646,6 +646,7 @@ input[type="file"] { display: none; }
 const CLOUDINARY_CLOUD = "dsgxmrcyq";
 const CLOUDINARY_PRESET = "Aancestr";
 const VIDEO_API = "/api/video";
+const DESIGN_API = "/api/design";
 </script>
 
 <script>
@@ -1073,7 +1074,40 @@ function saveVersion() {
   nameInput.value = "";
   refreshVersionSelect();
   document.getElementById("versionSelect").value = id;
-  toast(`Saved "${name}"`);
+  publishDesignState(version.state, name);
+}
+
+async function publishDesignState(stateToPublish, label) {
+  try {
+    const res = await fetch(DESIGN_API, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ state: stateToPublish }),
+    });
+    if (res.ok) toast(`Saved + published "${label}" · visible to all`);
+    else toast(`Saved "${label}" locally — couldn't publish (status ${res.status})`);
+  } catch (e) {
+    toast(`Saved "${label}" locally — design function unavailable`);
+  }
+}
+
+async function hydrateFromPublishedDesign() {
+  // Only pull the published design if the user has no local state yet
+  // (i.e., first visit on this browser / incognito / new device).
+  const hasLocal = localStorage.getItem(STATE_KEY) !== null;
+  if (hasLocal) return;
+  try {
+    const res = await fetch(DESIGN_API, { cache: "no-store" });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data && data.state) {
+      state = { ...DEFAULT_STATE, ...data.state, perBlockBg: data.state.perBlockBg || {} };
+      syncCPToState();
+      applyState();
+    }
+  } catch (e) {
+    // function unavailable (localhost without netlify dev) — fine
+  }
 }
 
 function loadVersion(id) {
@@ -1326,6 +1360,7 @@ applyState();
 refreshVersionSelect();
 updateStatusStrip();
 loadDefaultVideo();
+hydrateFromPublishedDesign();
 
 </script>
 </body>
