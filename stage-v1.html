@@ -58,8 +58,7 @@ html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
-  /* No smooth-scroll — the scroll position drives a scrub animation, so
-     we want raw scroll deltas without browser interpolation. */
+  scroll-behavior: smooth;
 }
 
 /* =========================================================
@@ -87,49 +86,29 @@ html, body {
      Scale grows with blur amount so edges always extend beyond the viewport. */
   transform: scale(var(--bg-blur-scale, 1));
   transform-origin: center center;
-  transition: filter 0.15s linear, transform 0.15s linear, opacity 0.15s linear;
-  /* Opacity + blend mode let the video interact with the page-bg colour
-     behind it. With mix-blend-mode the video composites against the body
-     background-color; e.g. multiply tints the video by --page-bg. */
-  opacity: var(--bg-video-opacity, 1);
-  mix-blend-mode: var(--bg-video-blend, normal);
+  transition: filter 0.15s linear, transform 0.15s linear;
 }
 body.has-bg-video .page-bg-video { display: block; }
 
 /* Page background colour — visible everywhere unless the bg video covers it. */
 body { background: var(--page-bg); }
 
-/* Content wrapper — holds the scroll-spacer (which provides scrollable height)
-   and the fixed-positioned statements. Transparent so the page bg colour or
-   video shows through any gaps. */
+/* Content wrapper — transparent so the page bg colour or video shows through
+   the gaps between/around statement content. */
 .cover {
   position: relative;
   z-index: 1;
-}
-
-/* Invisible element that gives the document its scrollable height.
-   Height is set by JS to N × 100vh so the page scrolls naturally; each
-   100vh of scroll corresponds to one statement transition. */
-.scroll-spacer {
-  width: 1px;
-  pointer-events: none;
+  min-height: 100vh;
 }
 
 /* Per-statement text-mask video — visible ONLY inside the text shape via SVG mask.
-   When no mask video is set, the statement renders normal HTML text in --text-color.
-
-   The video + mask SVG cover the FULL statement box (padding included), not
-   just the inner content area. This gives padding-y worth of natural overhang
-   above and below the text so ascenders, multi-line tspan offsets and slant
-   displacement fall inside the mask region. If the user wants more overhang
-   for extreme multi-line statements or aggressive slant, increasing the
-   Padding Y slider widens the mask area too. */
+   When no mask video is set, the statement renders normal HTML text in --text-color. */
 .text-mask-video {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: var(--section-padding-y);
+  left: var(--section-padding-x);
+  width: calc(100% - 2 * var(--section-padding-x));
+  height: calc(100% - 2 * var(--section-padding-y));
   object-fit: cover;
   z-index: 1;
   pointer-events: none;
@@ -138,25 +117,28 @@ body { background: var(--page-bg); }
 .statement.has-mask-video .text-mask-video { display: block; }
 .statement.has-mask-video .statement-text { visibility: hidden; }
 
-/* SVG container holding the per-statement text mask def. MUST share the same
-   CSS box as the video so the mask's user-space coordinates align with the
-   video's pixels. Explicit width/height (rather than just `inset: 0`) is
-   important because SVGs would otherwise collapse to their 300×150 default
-   intrinsic size and break the mask. */
+/* SVG container holding the per-statement text mask def.
+   Inset by section padding and explicitly sized via calc() so the mask
+   coordinate system matches the masked video's coordinate system.
+   Without calc() widths the SVG falls back to 300×150 and the mask breaks. */
 .mask-defs {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: var(--section-padding-y);
+  left: var(--section-padding-x);
+  width: calc(100% - 2 * var(--section-padding-x));
+  height: calc(100% - 2 * var(--section-padding-y));
   pointer-events: none;
   overflow: visible;
 }
 
 /* Section header — FIXED at the top of the viewport.
    Only one header is visible at a time (`.active`). JS toggles which one
-   based on which statement is currently centered (or incoming, post-contact).
-   When the active statement changes section, the active header swaps. */
+   based on which section group the viewport is currently inside. When the
+   next section's first statement scrolls into view, its header instantly
+   replaces the previous one. */
+.section-group {
+  /* No positioning needed — headers are fixed, not sticky-within-group */
+}
 .section-header {
   position: fixed;
   top: 0;
@@ -207,35 +189,19 @@ body { background: var(--page-bg); }
 
 /* =========================================================
    STATEMENT BLOCK
-   Each block is FIXED-POSITIONED and centered at the viewport's vertical
-   middle. Its rendered height = content + padding-y. Scroll position drives
-   the per-statement transform via `--ty` (a JS-set pixel offset added to the
-   centering translation).
-
-   Visibility: hidden by default. The scroll driver toggles `.visible` on
-   exactly two statements at a time — the current (A) and the incoming (B).
+   Each block is a full-viewport section.
    ========================================================= */
 .statement {
-  position: fixed;
-  top: 50%;
-  left: 0;
-  right: 0;
+  min-height: 100vh;
   padding: var(--section-padding-y) var(--section-padding-x);
-  /* Centering (-50%) is composed with the scroll-driven `--ty` offset.
-     `--ty` is in px and is written by updateScrollTransition() at 60fps. */
-  transform: translate3d(0, calc(-50% + var(--ty, 0px)), 0);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: stretch;
+  position: relative;
   transition: background-color 0.25s ease;
   cursor: pointer;
-  will-change: transform;
-  visibility: hidden;
-  z-index: 1;
 }
-.statement.visible { visibility: visible; }
-.statement.incoming { z-index: 2; }  /* B sits above A so the stack reads correctly */
 
 .statement.selected {
   outline: 1px dashed rgba(127, 127, 127, 0.6);
@@ -592,21 +558,6 @@ body.cp-open .hint { opacity: 1; }
 }
 
 input[type="file"] { display: none; }
-
-/* =========================================================
-   DEBUG BORDERS — toggled by the CP "Show borders" checkbox.
-   Outlines (not borders) so they don't change layout. Off by default.
-     red    = .statement (the full-viewport fixed block + its padding)
-     green  = .statement-text (HTML text inside the padded content area)
-     yellow = .text-mask-video (the masked video element)
-     blue   = .mask-defs (SVG that holds the mask def + buffer area)
-     magenta = .section-header (fixed header at top of viewport)
-   ========================================================= */
-body.debug-borders .statement      { outline: 2px dashed rgba(255,  80,  80, 0.70); outline-offset: -2px; }
-body.debug-borders .statement-text { outline: 2px dashed rgba( 80, 220,  80, 0.70); }
-body.debug-borders .text-mask-video{ outline: 2px dashed rgba(255, 200,  80, 0.80); }
-body.debug-borders .mask-defs      { outline: 2px dashed rgba( 80, 160, 255, 0.80); }
-body.debug-borders .section-header { outline: 2px dashed rgba(220,  80, 220, 0.70); }
 </style>
 </head>
 <body>
@@ -779,41 +730,10 @@ body.debug-borders .section-header { outline: 2px dashed rgba(220,  80, 220, 0.7
       </div>
     </div>
     <div class="cp-row">
-      <label>Bg opacity</label>
-      <div class="ctrl">
-        <input type="range" id="bgVideoOpacity" min="0" max="1" step="0.05" value="1">
-        <span class="value" id="bgVideoOpacityValue">1.00</span>
-      </div>
-    </div>
-    <div class="cp-row">
-      <label>Bg blend</label>
-      <div class="ctrl">
-        <select id="bgVideoBlend">
-          <option value="normal">Normal</option>
-          <option value="multiply">Multiply</option>
-          <option value="screen">Screen</option>
-          <option value="overlay">Overlay</option>
-          <option value="darken">Darken</option>
-          <option value="lighten">Lighten</option>
-          <option value="color-dodge">Color Dodge</option>
-          <option value="color-burn">Color Burn</option>
-          <option value="hard-light">Hard Light</option>
-          <option value="soft-light">Soft Light</option>
-          <option value="difference">Difference</option>
-          <option value="exclusion">Exclusion</option>
-          <option value="hue">Hue</option>
-          <option value="saturation">Saturation</option>
-          <option value="color">Color</option>
-          <option value="luminosity">Luminosity</option>
-        </select>
-      </div>
-    </div>
-    <div class="cp-row">
       <small style="color: rgba(242, 237, 231, 0.4); font-size: 10px; line-height: 1.5; padding: 4px 0;">
         Page bg plays full screen. Text mask reveals video inside text shape only.
-        If a slot is empty, the colour picker is used. Blur auto-scales the
-        video to hide blurred edges. Blend mode composites the video against
-        the page-bg colour — try Multiply or Overlay with a saturated bg.
+        If a slot is empty, the colour picker is used. Blur applies to page bg
+        video; the video auto-scales to hide blurred edges.
       </small>
     </div>
   </div>
@@ -852,23 +772,6 @@ body.debug-borders .section-header { outline: 2px dashed rgba(220,  80, 220, 0.7
     <div class="cp-actions">
       <button class="cp-btn" id="publishNow">Publish to Netlify</button>
       <button class="cp-btn ghost" id="pullFromLive">Pull latest</button>
-    </div>
-  </div>
-
-  <div class="cp-section">
-    <div class="cp-section-title">Debug</div>
-    <div class="cp-row">
-      <label>Show borders</label>
-      <div class="ctrl">
-        <input type="checkbox" id="debugBorders" style="width: 18px; height: 18px; cursor: pointer; accent-color: #F2EDE7;">
-      </div>
-    </div>
-    <div style="font-size: 10px; color: rgba(242, 237, 231, 0.45); line-height: 1.6; padding: 2px 0;">
-      <span style="color: rgba(255, 80, 80, 0.9);">━</span> statement &nbsp;
-      <span style="color: rgba(80, 220, 80, 0.9);">━</span> text &nbsp;
-      <span style="color: rgba(255, 200, 80, 0.9);">━</span> video<br>
-      <span style="color: rgba(80, 160, 255, 0.9);">━</span> mask &nbsp;
-      <span style="color: rgba(220, 80, 220, 0.9);">━</span> section header
     </div>
   </div>
 
@@ -990,8 +893,6 @@ const DEFAULT_STATE = {
   wdth: 100,
   wdthScroll: 0,
   bgBlur: 0,
-  bgVideoOpacity: 1,
-  bgVideoBlend: "normal",
   perBlockBg: {}    // { "01": "#FF0000", ... }
 };
 
@@ -1060,11 +961,6 @@ function applyState() {
   root.style.setProperty("--bg-blur", blur + "px");
   root.style.setProperty("--bg-blur-scale", (1 + blur / 100).toFixed(3));
 
-  // Bg video opacity + blend mode — let the video composite against the
-  // page-bg colour for colour-grading effects.
-  root.style.setProperty("--bg-video-opacity", state.bgVideoOpacity != null ? state.bgVideoOpacity : 1);
-  root.style.setProperty("--bg-video-blend", state.bgVideoBlend || "normal");
-
   // --font-variation is set by the scroll animation loop (animateScroll),
   // which uses state.slnt/wght/wdth as the base and adds scroll-driven delta.
   // Trigger one frame immediately so changes from the CP show up without scroll.
@@ -1084,30 +980,15 @@ function applyState() {
   updateMaskAlignment();
   updateMaskLineHeight();
 
-  // Geometry of the stacked transition depends on each statement's rendered
-  // height — which changes whenever fontSize / lineHeight / paddingY changes.
-  // Recompute on the next frame, after the browser has laid out the new styles.
-  if (typeof updateScrollTransition === "function") {
-    requestAnimationFrame(updateScrollTransition);
-  }
-
   saveState();
 }
 
 function updateMaskAlignment() {
   const align = state.textAlign || "center";
   const anchor = align === "left" ? "start" : align === "right" ? "end" : "middle";
-  // The mask SVG spans the FULL statement, which on the centered fixed-layout
-  // is 100vw wide. So `${paddingX}%` of SVG width equals paddingX vw — the
-  // same offset the HTML .statement-text gets from the .statement's CSS
-  // padding. This is what makes Padding X actually push the masked text in
-  // from the viewport edge for left/right alignment. For centre alignment,
-  // paddingX doesn't shift the anchor — it just constrains the symmetric
-  // breathing room around the text via the statement's CSS padding box.
-  const paddingX = state.paddingX != null ? state.paddingX : 6;
-  const x = align === "left" ? `${paddingX}%`
-          : align === "right" ? `${100 - paddingX}%`
-          : "50%";
+  // No hidden padding — text edge sits exactly at the mask edge.
+  // The Padding X slider is the single source of breathing room.
+  const x = align === "left" ? "0%" : align === "right" ? "100%" : "50%";
   document.querySelectorAll(".mask-defs text").forEach(textEl => {
     textEl.setAttribute("text-anchor", anchor);
     textEl.setAttribute("x", x);
@@ -1131,166 +1012,77 @@ function updateMaskLineHeight() {
 
 // =========================================================
 // RENDER
-// Layout: scroll-spacer (gives the document N × 100vh of scrollable height)
-// + one fixed-position header per unique section
-// + N fixed-position statements, all centered at viewport mid via CSS.
-// The scroll driver (updateScrollTransition) decides which two statements
-// are visible and what their translateY is.
 // =========================================================
 function renderStage() {
   const stage = document.getElementById("stage");
   stage.innerHTML = "";
 
-  // Scroll spacer — height = N × 100vh so the document scrolls naturally.
-  // The spacer itself is invisible; statements are positioned over it.
-  const spacer = document.createElement("div");
-  spacer.className = "scroll-spacer";
-  spacer.style.height = (blocks.length * 100) + "vh";
-  stage.appendChild(spacer);
+  // Group blocks by section so each section gets a sticky header that
+  // gets knocked out of frame by the next section's header.
+  const groups = [];
+  let currentGroup = null;
+  blocks.forEach(b => {
+    if (!currentGroup || currentGroup.name !== b.section) {
+      currentGroup = { name: b.section, blocks: [] };
+      groups.push(currentGroup);
+    }
+    currentGroup.blocks.push(b);
+  });
 
-  // One header per unique section name. All sit at top: 0; the one matching
-  // the currently-active statement's section gets `.active`.
-  const sectionNames = [];
-  blocks.forEach(b => { if (!sectionNames.includes(b.section)) sectionNames.push(b.section); });
-  sectionNames.forEach(name => {
+  groups.forEach(group => {
+    const groupEl = document.createElement("div");
+    groupEl.className = "section-group";
+
     const header = document.createElement("div");
     header.className = "section-header";
-    header.dataset.section = name;
-    header.textContent = name;
-    stage.appendChild(header);
+    header.textContent = group.name;
+    groupEl.appendChild(header);
+
+    group.blocks.forEach(b => buildStatement(b, groupEl));
+    stage.appendChild(groupEl);
   });
 
-  // Flat-render statements; visibility is controlled by the scroll driver.
-  blocks.forEach(b => buildStatement(b, stage));
-
-  // Initialise transition state (which two are visible, where, and which
-  // section header is active).
-  updateScrollTransition();
+  // Sync the visible header once after rendering
+  updateActiveSectionHeader();
 }
 
-// Set the active section header to whichever section the currently-primary
-// statement belongs to. Called from updateScrollTransition with the primary
-// statement's section name. Idempotent and cheap.
-function setActiveSection(name) {
-  document.querySelectorAll(".section-header").forEach(h => {
-    h.classList.toggle("active", h.dataset.section === name);
+// Determine which section group the viewport is currently inside,
+// and show that group's header at the top of the screen. The transition
+// happens at the boundary between groups — a clean swap, no animation
+// of the header sliding away.
+function updateActiveSectionHeader() {
+  const groups = document.querySelectorAll(".section-group");
+  if (!groups.length) return;
+
+  // The active group is the LAST one whose top has reached (or crossed) the
+  // viewport top. This guarantees a clean swap at the boundary: when group B's
+  // top hits 0, B becomes active. Group A's header swaps out instantly.
+  let activeGroup = groups[0];
+  groups.forEach(group => {
+    const rect = group.getBoundingClientRect();
+    if (rect.top <= 0) {
+      activeGroup = group;
+    }
+  });
+
+  groups.forEach(group => {
+    const header = group.querySelector(".section-header");
+    if (header) header.classList.toggle("active", group === activeGroup);
   });
 }
 
-// =========================================================
-// SCROLL TRANSITION — the new mechanic.
-//
-// Mental model:
-//   - Document scroll height = N × 100vh.
-//   - Floor(scrollY / vh) = index `i` of the CURRENT statement (A).
-//   - Fractional part `p` ∈ [0, 1] = progress of the A→B transition.
-//   - Per-transition scroll budget is exactly one viewport height (H px).
-//
-// THREE phases per transition (read in pixel distances along the H budget):
-//
-//   ┌──────────────────────┬─────────────────────┬──────────────────────┐
-//   │ Phase 1 (B alone)    │ Phase 2 (stacked)   │ Phase 3 (A alone)    │
-//   │ B rises from below   │ A and B move        │ A keeps moving up;   │
-//   │ until B-top contacts │ together until B    │ B locked at centre.  │
-//   │ A-bottom. A static.  │ is centred. A is    │ A exits past the     │
-//   │                      │ pushed up by B.     │ top of the frame.    │
-//   └──────────────────────┴─────────────────────┴──────────────────────┘
-//
-// Geometry (H = innerHeight, h_X = X.offsetHeight, centred means top:50%
-// + translateY(-50%)):
-//   phase1Len = H/2 − h_A/2  (B-top journey from y=H to y=H/2 + h_A/2)
-//   phase2Len = h_A/2 + h_B/2  (both translate up by this amount)
-//   phase3Len = H/2 − h_B/2  (A continues until its bottom passes y=0)
-//   The three lengths sum to H exactly, regardless of h_A and h_B — so one
-//   transition uses one viewport of scroll, no matter how tall the blocks.
-//
-// Phase 3 is what fixes the "A snaps away" bug: A keeps translating until
-// its top is at −h_A (fully above the viewport). Reverse scroll plays the
-// same arithmetic backwards, so going up is now smooth as well.
-// =========================================================
-function updateScrollTransition() {
-  const statements = document.querySelectorAll(".statement");
-  const N = statements.length;
-  if (!N) return;
-
-  const H = window.innerHeight;
-  const rawProgress = window.scrollY / H;
-  let i = Math.floor(rawProgress);
-  let p = rawProgress - i;
-
-  // Clamp so we never index past the last statement.
-  if (i >= N - 1) { i = N - 1; p = 0; }
-  if (i < 0) { i = 0; p = 0; }
-
-  const A = statements[i];
-  const B = i + 1 < N ? statements[i + 1] : null;
-
-  // Visibility + z-index: only the active pair is rendered.
-  statements.forEach((s, idx) => {
-    const inPair = idx === i || idx === i + 1;
-    s.classList.toggle("visible", inPair);
-    s.classList.toggle("incoming", idx === i + 1);
-    if (!inPair) s.style.setProperty("--ty", "0px");
-  });
-
-  if (!B) {
-    // Last statement — just hold it centered.
-    A.style.setProperty("--ty", "0px");
-    setActiveSection(A.dataset.section);
-    return;
-  }
-
-  const hA = A.offsetHeight;
-  const hB = B.offsetHeight;
-
-  const phase1Len = Math.max(0, H / 2 - hA / 2);
-  const phase2Len = hA / 2 + hB / 2;
-  const phase3Len = Math.max(0, H / 2 - hB / 2);
-  // (phase1Len + phase2Len + phase3Len = H by construction.)
-
-  const D = p * H;            // pixel distance into the current transition
-  let tA, tB;
-
-  if (D < phase1Len) {
-    // Phase 1 — B approaching from below; A locked at centre.
-    const localP = phase1Len > 0 ? D / phase1Len : 0;
-    const tB_start = H / 2 + hB / 2;      // B-top at viewport bottom (y = H)
-    const tB_contact = hA / 2 + hB / 2;   // B-top at A-bottom
-    tA = 0;
-    tB = tB_start + (tB_contact - tB_start) * localP;
-  } else if (D < phase1Len + phase2Len) {
-    // Phase 2 — stacked push. Both translate up at 1px per 1px of scroll.
-    const delta = D - phase1Len;
-    tA = -delta;
-    tB = (hA / 2 + hB / 2) - delta;
-  } else {
-    // Phase 3 — A continues up alone; B parked at centre.
-    const localD = D - phase1Len - phase2Len;
-    tA = -(hA / 2 + hB / 2) - localD;
-    tB = 0;
-  }
-
-  A.style.setProperty("--ty", tA + "px");
-  B.style.setProperty("--ty", tB + "px");
-
-  // Section header — swap at the contact point (start of phase 2), the
-  // moment B begins to push A.
-  const primary = D < phase1Len ? A : B;
-  setActiveSection(primary.dataset.section);
-}
-
-// rAF-throttled scroll/resize → transition updates.
-let _scrollTickQueued = false;
-function _scheduleScrollUpdate() {
-  if (_scrollTickQueued) return;
-  _scrollTickQueued = true;
+// Throttle scroll updates with requestAnimationFrame
+let _headerTickQueued = false;
+function _scheduleHeaderUpdate() {
+  if (_headerTickQueued) return;
+  _headerTickQueued = true;
   requestAnimationFrame(() => {
-    updateScrollTransition();
-    _scrollTickQueued = false;
+    updateActiveSectionHeader();
+    _headerTickQueued = false;
   });
 }
-window.addEventListener("scroll", _scheduleScrollUpdate, { passive: true });
-window.addEventListener("resize", _scheduleScrollUpdate, { passive: true });
+window.addEventListener("scroll", _scheduleHeaderUpdate, { passive: true });
+window.addEventListener("resize", _scheduleHeaderUpdate, { passive: true });
 
 function buildStatement(b, parentEl) {
     const section = document.createElement("section");
@@ -1486,17 +1278,6 @@ function bindCP() {
     applyState();
   });
 
-  // Bg video opacity + blend mode
-  $("bgVideoOpacity").addEventListener("input", e => {
-    state.bgVideoOpacity = parseFloat(e.target.value);
-    $("bgVideoOpacityValue").textContent = state.bgVideoOpacity.toFixed(2);
-    applyState();
-  });
-  $("bgVideoBlend").addEventListener("change", e => {
-    state.bgVideoBlend = e.target.value;
-    applyState();
-  });
-
   // Scroll-driven axis impact (per-font)
   $("slntScroll").addEventListener("input", e => {
     state.slntScroll = parseFloat(e.target.value);
@@ -1594,12 +1375,6 @@ function bindCP() {
   $("publishNow").addEventListener("click", publishToLive);
   $("pullFromLive").addEventListener("click", pullFromLive);
 
-  // Debug borders — ephemeral, not part of `state` so it isn't saved with
-  // versions or pushed when publishing. Each reload starts off.
-  $("debugBorders").addEventListener("change", e => {
-    document.body.classList.toggle("debug-borders", e.target.checked);
-  });
-
   // CP close button
   $("cpClose").addEventListener("click", () => toggleCP(false));
 }
@@ -1630,9 +1405,6 @@ function syncCPToState() {
   $("wdth").value = state.wdth; $("wdthValue").textContent = state.wdth;
   $("wdthScroll").value = state.wdthScroll || 0; $("wdthScrollValue").textContent = state.wdthScroll || 0;
   $("bgBlur").value = state.bgBlur || 0; $("bgBlurValue").textContent = (state.bgBlur || 0).toFixed(0) + "px";
-  $("bgVideoOpacity").value = state.bgVideoOpacity != null ? state.bgVideoOpacity : 1;
-  $("bgVideoOpacityValue").textContent = (state.bgVideoOpacity != null ? state.bgVideoOpacity : 1).toFixed(2);
-  $("bgVideoBlend").value = state.bgVideoBlend || "normal";
   $("fontSize").value = state.fontSize; $("fontSizeValue").textContent = state.fontSize.toFixed(1) + "vw";
   $("letterSpacing").value = state.letterSpacing; $("letterSpacingValue").textContent = state.letterSpacing.toFixed(3);
   $("lineHeight").value = state.lineHeight; $("lineHeightValue").textContent = state.lineHeight.toFixed(2);
